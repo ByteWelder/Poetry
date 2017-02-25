@@ -61,7 +61,7 @@ repositories {
 ```groovy
 dependencies {
     compile (
-        [group: 'com.bytewelder.poetry', name: 'poetry', version: '3.1.0']
+        [group: 'com.bytewelder.poetry', name: 'poetry', version: '4.0.0']
     )
 }
 ```
