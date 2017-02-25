@@ -6,6 +6,8 @@ Poetry
 Poetry is an Android persistence library that allows you to persist a JSON object tree directly into an SQLite database through [OrmLite].
 Poetry enables you to write less code and persist data much faster.
 
+Poetry is forked from [github.com/elastique/poetry](https://github.com/elastique/poetry) and is now maintained here, by the original developer.
+
 Consider this JSON:
 ```json
 {
