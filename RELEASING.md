@@ -4,4 +4,5 @@
 2. Run tests
 3. Release: `./gradlew clean build bintrayUpload -PdryRun=false -PbintrayUser=??? -PbintrayKey=???`
 4. Push version tag to git
-5. Bump version in repository
+5. Update version in `README.md`
+6. Bump version in repository
