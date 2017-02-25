@@ -12,7 +12,7 @@ ext {
 
     // Libraries
     slf4jVersion = '1.7.24'
-    ormliteVersion = '4.48'
+    ormliteVersion = '5.0'
     androidSupportLibraryVersion = '25.1.1'
     androidBuildToolsVersion = '25.0.2'
     androidTargetSdkVersion = 25

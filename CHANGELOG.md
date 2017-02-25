@@ -1,5 +1,6 @@
 ## 4.0.0
 
+- using OrmLite 5.0
 - Package ID renamed to `poetry`
 - Updated Android SDKs and dependencies to API version 25
 - Updated gradle-wrapper
