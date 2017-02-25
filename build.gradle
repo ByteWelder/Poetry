@@ -7,7 +7,7 @@ ext {
     poetryUserOrg = 'bytewelder'
     poetryWebsite = 'https://github.com/ByteWelder/Poetry'
     poetryGroupId = 'com.bytewelder.poetry'
-    poetryRepoName = 'poetry'
+    poetryRepoName = 'maven-release'
     poetryName = 'Poetry'
 
     // Libraries
