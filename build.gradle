@@ -72,6 +72,10 @@ android {
         exclude 'LICENSE.txt'
         exclude 'LICENSE'
     }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
 }
 
 android.libraryVariants.all { variant ->
