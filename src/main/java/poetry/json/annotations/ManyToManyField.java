@@ -10,12 +10,11 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ManyToManyField
-{
-    /**
-     * The target type that contains 2 fields (one from each type) with a DatabaseField annotation.
-     *
-     * @return the type to target
-     */
-    Class<?> targetType();
+public @interface ManyToManyField {
+	/**
+	 * The target type that contains 2 fields (one from each type) with a DatabaseField annotation.
+	 *
+	 * @return the type to target
+	 */
+	Class<?> targetType();
 }

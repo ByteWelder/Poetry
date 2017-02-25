@@ -10,8 +10,7 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MapFrom
-{
+public @interface MapFrom {
 	/**
 	 * @return The name of the property.
 	 */

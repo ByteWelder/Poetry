@@ -11,8 +11,7 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ForeignCollectionFieldSingleTarget
-{
-    String targetField(); // target database column name
+public @interface ForeignCollectionFieldSingleTarget {
+	String targetField(); // target database column name
 }
 

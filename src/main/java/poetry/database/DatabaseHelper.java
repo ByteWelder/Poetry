@@ -2,6 +2,7 @@ package poetry.database;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
@@ -9,131 +10,100 @@ import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.sql.SQLException;
 import java.util.HashMap;
 
-public class DatabaseHelper extends OrmLiteSqliteOpenHelper
-{
-    private static final Logger sLogger = LoggerFactory.getLogger(DatabaseHelper.class);
+public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
+	private static DatabaseConfiguration configuration;
+	protected static final HashMap<Class<?>, Dao<?, ?>> cachedDaos = new HashMap<>();
 
-    private static DatabaseConfiguration sConfiguration;
+	public DatabaseHelper(Context context) {
+		super(context, configuration.getDatabaseName(), null, configuration.getModelVersion());
+	}
 
-    protected static final HashMap<Class<?>, Dao<?, ?>> sCachedDaos = new HashMap<>();
+	public DatabaseHelper(Context context, DatabaseConfiguration configuration) {
+		super(context, configuration.getDatabaseName(), null, configuration.getModelVersion());
 
-    public DatabaseHelper(Context context)
-    {
-        super(context, sConfiguration.getDatabaseName(), null, sConfiguration.getModelVersion());
-    }
+		DatabaseHelper.configuration = configuration;
+	}
 
-    public DatabaseHelper(Context context, DatabaseConfiguration configuration)
-    {
-        super(context, configuration.getDatabaseName(), null, configuration.getModelVersion());
+	public static void setConfiguration(DatabaseConfiguration configuration) {
+		DatabaseHelper.configuration = configuration;
+	}
 
-        sConfiguration = configuration;
-    }
+	public static DatabaseHelper getHelper(Context context) {
+		return OpenHelperManager.getHelper(context, DatabaseHelper.class);
+	}
 
-    public static void setConfiguration(DatabaseConfiguration configuration)
-    {
-        sConfiguration = configuration;
-    }
+	public static <T extends DatabaseHelper> T getHelper(Context context, Class<T> classObject) {
+		return OpenHelperManager.getHelper(context, classObject);
+	}
 
-    public static DatabaseHelper getHelper(Context context)
-    {
-        return OpenHelperManager.getHelper(context, DatabaseHelper.class);
-    }
+	public static void releaseHelper() {
+		OpenHelperManager.releaseHelper();
+	}
 
-    public static <T extends DatabaseHelper> T getHelper(Context context, Class<T> classObject)
-    {
-        return OpenHelperManager.getHelper(context, classObject);
-    }
+	@Override
+	public void onCreate(SQLiteDatabase db, ConnectionSource connectionSource) {
+		createDatabase();
+	}
 
-    public static void releaseHelper()
-    {
-        OpenHelperManager.releaseHelper();
-    }
+	public void createTable(Class<?> classObject) {
+		try {
+			TableUtils.createTable(getConnectionSource(), classObject);
+		} catch (SQLException e) {
+			Log.d(DatabaseHelper.class.getName(), "Can't create database", e);
+			throw new RuntimeException(e);
+		}
 
-    @Override
-    public void onCreate(SQLiteDatabase db, ConnectionSource connectionSource)
-    {
-        createDatabase();
-    }
+	}
 
-    public void createTable(Class<?> classObject)
-    {
-        try
-        {
-            TableUtils.createTable(getConnectionSource(), classObject);
-        }
-        catch (SQLException e)
-        {
-            sLogger.error(DatabaseHelper.class.getName(), "Can't create database", e);
-            throw new RuntimeException(e);
-        }
+	@Override
+	public void onUpgrade(SQLiteDatabase db, ConnectionSource connectionSource, int oldVersion, int newVersion) {
+		recreateDatabase();
+	}
 
-    }
+	public <T> void dropTable(Class<T> classObject) {
+		try {
+			TableUtils.dropTable(getConnectionSource(), classObject, true);
 
-    @Override
-    public void onUpgrade(SQLiteDatabase db, ConnectionSource connectionSource, int oldVersion, int newVersion)
-    {
-        recreateDatabase();
-    }
+			if (cachedDaos.containsKey(classObject)) {
+				cachedDaos.remove(classObject);
+			}
+		} catch (SQLException e) {
+			Log.e(DatabaseHelper.class.getName(), "can't drop table", e);
+		}
+	}
 
-    public <T> void dropTable(Class<T> classObject)
-    {
-        try
-        {
-            TableUtils.dropTable(getConnectionSource(), classObject, true);
+	public void recreateDatabase() {
+		dropDatabase();
+		createDatabase();
+	}
 
-            if (sCachedDaos.containsKey(classObject))
-            {
-                sCachedDaos.remove(classObject);
-            }
-        }
-        catch (SQLException e)
-        {
-            sLogger.error("can't drop table", e);
-        }
-    }
+	/**
+	 * Drops all tables.
+	 */
+	public void dropDatabase() {
+		for (Class<?> classObject : configuration.getModelClasses()) {
+			dropTable(classObject);
+		}
+	}
 
-    public void recreateDatabase()
-    {
-        dropDatabase();
-        createDatabase();
-    }
+	private void createDatabase() {
+		for (Class<?> classObject : configuration.getModelClasses()) {
+			createTable(classObject);
+		}
+	}
 
-    /**
-     * Drops all tables.
-     */
-    public void dropDatabase()
-    {
-        for (Class<?> classObject : sConfiguration.getModelClasses())
-        {
-            dropTable(classObject);
-        }
-    }
+	@Override
+	public <D extends com.j256.ormlite.dao.Dao<T, ?>, T> D getDao(java.lang.Class<T> clazz) throws java.sql.SQLException {
+		@SuppressWarnings("unchecked")
+		D dao = (D) cachedDaos.get(clazz);
 
-    private void createDatabase()
-    {
-        for (Class<?> classObject : sConfiguration.getModelClasses())
-        {
-            createTable(classObject);
-        }
-    }
-
-    @Override
-    public <D extends com.j256.ormlite.dao.Dao<T,?>, T>  D getDao(java.lang.Class<T> clazz) throws java.sql.SQLException
-    {
-        @SuppressWarnings("unchecked")
-        D dao = (D)sCachedDaos.get(clazz);
-
-        if(dao == null)
-        {
-            dao = super.getDao(clazz);
-            sCachedDaos.put(clazz, dao);
-        }
-        return dao;
-    }
+		if (dao == null) {
+			dao = super.getDao(clazz);
+			cachedDaos.put(clazz, dao);
+		}
+		return dao;
+	}
 }

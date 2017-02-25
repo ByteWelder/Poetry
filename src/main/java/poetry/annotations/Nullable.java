@@ -9,7 +9,6 @@ import java.lang.annotation.Target;
  * An annotation to document that the specified target can be optionally null.
  */
 @Retention(RetentionPolicy.CLASS)
-@Target( { ElementType.FIELD, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.PARAMETER } )
-public @interface Nullable
-{
+@Target({ElementType.FIELD, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.PARAMETER})
+public @interface Nullable {
 }

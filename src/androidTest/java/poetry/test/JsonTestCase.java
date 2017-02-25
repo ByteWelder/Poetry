@@ -23,7 +23,7 @@ public class JsonTestCase extends AndroidTestCase
         DatabaseHelper helper = DatabaseHelper.getHelper(getContext());
 
         // Load JSON
-        JSONObject json = JsonLoader.loadObject(getContext(), nl.elastique.poetry.data.test.R.raw.test);
+        JSONObject json = JsonLoader.loadObject(getContext(), poetry.test.R.raw.test);
 
         // Get child arrays from JSON
         JSONArray users_json = JsonPathResolver.resolveArray(json, "users");
