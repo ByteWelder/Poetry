@@ -1,4 +1,12 @@
-## 3.0.0 
+## 4.0.0
+
+- Package ID renamed to `poetry`
+- Updated Android SDKs and dependencies to API version 25
+- Updated gradle-wrapper
+- Removed slf4j dependency
+- added release guidelines
+
+## 3.0.0
 
 Improvements:
  - improved tests

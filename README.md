@@ -54,25 +54,17 @@ persister.persistObject(User.class, json_object);
 
 ```groovy
 repositories {
-    mavenCentral()
-    maven {
-        url "https://dl.bintray.com/elastique/poetry"
-    }
+    jcenter()
 }
 ```
 
 ```groovy
 dependencies {
     compile (
-        [group: 'nl.elastique.poetry', name: 'poetry', version: '3.0.1']
+        [group: 'com.bytewelder.poetry', name: 'poetry', version: '3.1.0']
     )
 }
 ```
-
-## Demo ##
-
-A [Demo] application is available on GitHub
-
 
 ## Behaviors ##
 
@@ -93,9 +85,9 @@ In the example below, you can see a custom `DatabaseHelper` with a `DatabaseConf
 import android.database.sqlite.SQLiteDatabase;
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.support.ConnectionSource;
-import nl.elastique.poetry.database.DatabaseConfiguration;
+import poetry.database.DatabaseConfiguration;
 
-public class MyDatabaseHelper extends nl.elastique.poetry.database.DatabaseHelper
+public class MyDatabaseHelper extends poetry.database.DatabaseHelper
 {
     public final static DatabaseConfiguration sConfiguration = new DatabaseConfiguration(1, new Class<?>[]
     {
@@ -366,7 +358,6 @@ public class UserTag
 ```
 
 [license-svg]: https://img.shields.io/badge/license-Apache%202.0-lightgrey.svg?style=flat
-[license-link]: https://github.com/elastique/poetry/blob/master/LICENSE
+[license-link]: https://github.com/ByteWelder/Poetry/blob/master/LICENSE
 [OrmLite]: http://ormlite.com
 [JSON]: http://json.org/java/
-[Demo]: https://github.com/elastique/poetry-demo
