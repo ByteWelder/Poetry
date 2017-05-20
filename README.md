@@ -48,7 +48,7 @@ persister.persistObject(User.class, json_object);
 
 ## Requirements ##
 
-- Android 2.3.3 (API level 10) or higher
+- Android 4.1 (API level 16) or higher
 
 ## Usage ##
 
