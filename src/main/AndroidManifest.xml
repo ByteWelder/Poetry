@@ -1,7 +1,1 @@
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    package="poetry">
-
-    <application android:allowBackup="true" />
-
-</manifest>
+<manifest package="poetry" />

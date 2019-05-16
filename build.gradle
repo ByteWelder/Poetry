@@ -10,18 +10,20 @@ ext {
 	poetryRepoName = 'maven-release'
 	poetryName = 'Poetry'
 
-	// Libraries
-	slf4jVersion = '1.7.24'
-	ormliteVersion = '5.1'
-	androidSupportLibraryVersion = '28.0.0'
-	androidBuildToolsVersion = '28.0.3'
+	// Platform
+	kotlinVersion = '1.3.31'
+	androidMinSdkVersion = 21
 	androidTargetSdkVersion = 28
 	androidCompileSdkVersion = 28
-	kotlinVersion = '1.3.10'
+
+	// Dependencies
+	slf4jVersion = '1.7.24'
+	ormliteVersion = '5.1'
+	androidSupportTestRunnerVersion = '1.0.0'
 }
 
 buildscript {
-	ext.kotlinVersion = '1.3.10'
+	ext.kotlinVersion = '1.3.31'
 
 	repositories {
 		jcenter()
@@ -29,47 +31,26 @@ buildscript {
 	}
 
 	dependencies {
-		classpath 'com.android.tools.build:gradle:3.2.1'
-		classpath 'com.neenbedankt.gradle.plugins:android-apt:1.7'
+		classpath 'com.android.tools.build:gradle:3.4.0'
 		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-		// bintray usage: ./gradlew clean build bintrayUpload -PbintrayUser=??? -PbintrayKey=??? -PdryRun=false
 	}
 }
 
 repositories {
-	mavenCentral()
+	jcenter()
 	google()
-}
-
-dependencies {
-	implementation(
-			// Language
-			"org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion",
-
-			// Android
-			[group: 'com.android.support', name: 'support-v4', version: androidSupportLibraryVersion],
-
-			// ORM
-			[group: 'com.j256.ormlite', name: 'ormlite-core', version: ormliteVersion],
-			[group: 'com.j256.ormlite', name: 'ormlite-android', version: ormliteVersion],
-	)
-
-	androidTestImplementation(
-			// TODO: Can we remove this?
-			[group: 'commons-io', name: 'commons-io', version: '2.6']
-	)
 }
 
 android {
 	compileSdkVersion androidCompileSdkVersion
-	buildToolsVersion androidBuildToolsVersion
 
 	defaultConfig {
-		minSdkVersion 21
+		minSdkVersion androidMinSdkVersion
 		targetSdkVersion androidTargetSdkVersion
-		testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+		testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
 	}
 
+	// TODO: Clean up
 	packagingOptions {
 		exclude 'META-INF/DEPENDENCIES'
 		exclude 'META-INF/LICENSE'
@@ -82,22 +63,23 @@ android {
 		exclude 'LICENSE'
 	}
 
-	lintOptions {
-		disable 'InvalidPackage'
-	}
-
 	compileOptions {
 		sourceCompatibility JavaVersion.VERSION_1_7
 		targetCompatibility JavaVersion.VERSION_1_7
 	}
+
+	lintOptions {
+		disable 'InvalidPackage' // for OrmLite Core 5.1
+	}
 }
 
-//publish {
-//	userOrg = poetryUserOrg
-//	repoName = poetryRepoName
-//	groupId = poetryGroupId
-//	artifactId = 'poetry'
-//	version = poetryVersion
-//	description = poetryName
-//	website = poetryWebsite
-//}
+dependencies {
+	// Language
+	api "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+
+	// ORM
+	api "com.j256.ormlite:ormlite-core:$ormliteVersion"
+	api "com.j256.ormlite:ormlite-android:$ormliteVersion"
+
+	androidTestImplementation "com.android.support.test:runner:$androidSupportTestRunnerVersion"
+}
