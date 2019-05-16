@@ -84,17 +84,22 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 	}
 
 	companion object {
+		@JvmStatic
 		private var configuration: DatabaseConfiguration? = null
+		@JvmStatic
 		protected val cachedDaos = HashMap<Class<*>, Dao<*, *>>()
 
+		@JvmStatic
 		fun getHelper(context: Context): DatabaseHelper {
 			return OpenHelperManager.getHelper(context, DatabaseHelper::class.java)
 		}
 
+		@JvmStatic
 		fun <T : DatabaseHelper> getHelper(context: Context, classObject: Class<T>): T {
 			return OpenHelperManager.getHelper(context, classObject)
 		}
 
+		@JvmStatic
 		fun releaseHelper() {
 			OpenHelperManager.releaseHelper()
 		}

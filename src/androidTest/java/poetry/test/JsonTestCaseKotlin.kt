@@ -8,18 +8,18 @@ import org.junit.Test
 import poetry.database.DatabaseHelper.Companion.releaseHelper
 import poetry.json.JsonPathResolver
 import poetry.json.JsonPersister
-import poetry.test.data.DatabaseHelper
+import poetry.test.data.getDatabaseHelper
 import poetry.test.data.loadJsonObject
 import poetry.test.data.models.Group
 import poetry.test.data.models.User
 
-class JsonTestCase {
+class JsonTestCaseKotlin {
 
 	@Test
 	@Throws(Exception::class)
 	fun testJsonMapper() {
 		val context = InstrumentationRegistry.getContext()
-		val helper = DatabaseHelper.getHelper(context)
+		val helper = getDatabaseHelper(context)
 
 		// Load JSON
 		val json = loadJsonObject(context, R.raw.test)
