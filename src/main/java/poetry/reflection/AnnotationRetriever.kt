@@ -82,7 +82,6 @@ class AnnotationRetriever {
 		return annotation as AnnotationType?
 	}
 
-	@Nullable
 	private fun getCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out Annotation>): Annotation? {
 		val annotationMap = classAnnotationCache[parentClass]
 

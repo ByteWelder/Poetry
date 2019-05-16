@@ -6,7 +6,7 @@ class DatabaseConfiguration @JvmOverloads constructor(
 	val databaseName: String = DEFAULT_NAME
 ) {
 	companion object {
-		val DEFAULT_NAME = "database"
+		const val DEFAULT_NAME = "database"
 	}
 }
 

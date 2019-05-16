@@ -119,7 +119,6 @@ object OrmliteReflection {
 	 * @param modelClass          the class to find the ID field in
 	 * @return the Field or null
 	 */
-	@Nullable
 	fun findIdField(annotationRetriever: AnnotationRetriever, modelClass: Class<*>): Field? {
 		for (field in modelClass.declaredFields) {
 			val databaseField = annotationRetriever.getAnnotation(field, DatabaseField::class.java)
