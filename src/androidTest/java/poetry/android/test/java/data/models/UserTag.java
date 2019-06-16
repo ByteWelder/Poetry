@@ -1,4 +1,4 @@
-package poetry.android.test.data.models;
+package poetry.android.test.java.data.models;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -7,16 +7,16 @@ import com.j256.ormlite.table.DatabaseTable;
 public class UserTag
 {
     @DatabaseField(generatedId = true, columnName = "id")
-    private int mId;
+    private int id;
 
     @DatabaseField(foreign = true, columnName = "user_id")
-    private User mUser;
+    private User user;
 
     @DatabaseField(columnName = "value")
-	private String mValue;
+	private String value;
 
     public String getTag()
     {
-        return mValue;
+        return value;
     }
 }

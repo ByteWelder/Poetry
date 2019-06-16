@@ -1,15 +1,11 @@
-package poetry.android.test.data
+package poetry.android.test.kotlin.data
 
 import android.content.Context
-import com.j256.ormlite.android.apptools.OpenHelperManager
+import poetry.android.test.kotlin.data.models.Group
+import poetry.android.test.kotlin.data.models.User
+import poetry.android.test.kotlin.data.models.UserGroup
+import poetry.android.test.kotlin.data.models.UserTag
 import poetry.database.DatabaseConfiguration
-import poetry.android.test.data.models.Group
-import poetry.android.test.data.models.User
-import poetry.android.test.data.models.UserGroup
-import poetry.android.test.data.models.UserTag
-
-fun getDatabaseHelper(context: Context): DatabaseHelper =
-	OpenHelperManager.getHelper(context, DatabaseHelper::class.java)
 
 class DatabaseHelper(context: Context) : poetry.database.DatabaseHelper(context, sConfiguration) {
 
@@ -22,6 +18,14 @@ class DatabaseHelper(context: Context) : poetry.database.DatabaseHelper(context,
 //	}
 
 	companion object {
-		val sConfiguration = DatabaseConfiguration(7, arrayOf(User::class.java, Group::class.java, UserTag::class.java, UserGroup::class.java))
+		val sConfiguration = DatabaseConfiguration(
+				1,
+				arrayOf(
+					User::class.java,
+					Group::class.java,
+					UserTag::class.java,
+					UserGroup::class.java
+				)
+		)
 	}
 }

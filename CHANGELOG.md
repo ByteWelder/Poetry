@@ -1,3 +1,15 @@
+## 5.0.0
+
+- AndroidX
+- Android minimum SDK 21
+- Android target/build SDK 29
+- Android Gradle plugin 3.4.1
+- Kotlin 1.3.31
+- Gradle Wrapper 5.1.1
+- General cleanup
+- Removed deprecated `JsonPathResolver.resolvePath()`
+- Removed create/release database helper method: use `OpenHelperManager` from ORMLite instead
+
 ## 4.0.0
 
 - using OrmLite 5.0

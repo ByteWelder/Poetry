@@ -1,4 +1,4 @@
-package poetry.android.test.data.models;
+package poetry.android.test.java.data.models;
 
 import com.j256.ormlite.dao.ForeignCollection;
 import com.j256.ormlite.field.DatabaseField;
@@ -17,11 +17,11 @@ public class User
 {
     @DatabaseField(id = true, columnName = "id")
 	@MapFrom("id")
-    private int mId;
+    private int id;
 
     @DatabaseField(columnName = "name")
 	@MapFrom("name")
-    private String mName;
+    private String name;
 
     /**
      * Many-to-many relationships.
@@ -32,7 +32,7 @@ public class User
     @ForeignCollectionField(eager = true)
     @ManyToManyField(targetType = Group.class)
 	@MapFrom("groups")
-    private ForeignCollection<UserGroup> mGroups;
+    private ForeignCollection<UserGroup> groups;
 
     /**
      * One-to-many relationships on simple types (arrays of strings/integers/etc.)
@@ -44,27 +44,27 @@ public class User
     @ForeignCollectionField(eager = true)
     @ForeignCollectionFieldSingleTarget(targetField = "value")
 	@MapFrom("tags")
-    private ForeignCollection<UserTag> mTags;
+    private ForeignCollection<UserTag> tags;
 
 	public int getId()
 	{
-		return mId;
+		return id;
 	}
 
 	public String getName()
 	{
-		return mName;
+		return name;
 	}
 
     public List<String> getTags()
     {
-        List<String> tags = new ArrayList<>();
+        List<String> tagList = new ArrayList<>();
 
-        for (UserTag tag : mTags)
+        for (UserTag tag : tags)
         {
-            tags.add(tag.getTag());
+            tagList.add(tag.getTag());
         }
 
-        return tags;
+        return tagList;
     }
 }

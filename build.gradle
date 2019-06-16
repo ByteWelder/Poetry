@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 
 ext {
 	// Publishing
-	poetryVersion = '4.0.0'
+	poetryVersion = '5.0.0'
 	poetryUserOrg = 'bytewelder'
 	poetryWebsite = 'https://github.com/ByteWelder/Poetry'
 	poetryGroupId = 'com.bytewelder.poetry'
@@ -17,7 +17,6 @@ ext {
 	androidCompileSdkVersion = 29
 
 	// Dependencies
-	slf4jVersion = '1.7.24'
 	ormliteVersion = '5.1'
 }
 

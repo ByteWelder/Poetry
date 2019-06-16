@@ -32,11 +32,11 @@ internal object JsonUtils {
 
 	@Throws(JSONException::class)
 	fun copyContentValue(jsonObject: JSONObject, jsonKey: String, values: ContentValues, key: String): Boolean {
-		if (!jsonObject.has(jsonKey)) {
-			return false
+		return if (!jsonObject.has(jsonKey)) {
+			false
 		} else {
 			val value = jsonObject.get(jsonKey)
-			return copyValue(value, key, values)
+			copyValue(value, key, values)
 		}
 	}
 

@@ -1,4 +1,4 @@
-package poetry.android.test.data.models;
+package poetry.android.test.java.data.models;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
@@ -13,13 +13,13 @@ public class UserGroup
 {
     @DatabaseField(generatedId = true)
 	@MapFrom("id")
-    private int mId;
+    private int id;
 
     @DatabaseField(foreign = true, columnName = "user_id")
 	@MapFrom("user")
-	private User mUser;
+	private User user;
 
     @DatabaseField(foreign = true, columnName = "group_id")
 	@MapFrom("group")
-    private Group mGroup;
+    private Group group;
 }

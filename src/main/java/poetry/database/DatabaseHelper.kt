@@ -3,7 +3,6 @@ package poetry.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import com.j256.ormlite.android.apptools.OpenHelperManager
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper
 import com.j256.ormlite.dao.Dao
 import com.j256.ormlite.support.ConnectionSource
@@ -13,7 +12,20 @@ import java.util.*
 
 open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 
-	constructor(context: Context) : super(context, configuration!!.databaseName, null, configuration!!.modelVersion)
+	companion object {
+		@JvmStatic
+		private var configuration: DatabaseConfiguration? = null
+
+		@JvmStatic
+		protected val cachedDaos = HashMap<Class<*>, Dao<*, *>>()
+	}
+
+	constructor(context: Context) : super(
+			context,
+			configuration!!.databaseName,
+			null,
+			configuration!!.modelVersion
+	)
 
 	constructor(context: Context, configuration: DatabaseConfiguration) : super(context, configuration.databaseName, null, configuration.modelVersion) {
 
@@ -24,21 +36,23 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 		createDatabase()
 	}
 
-	fun createTable(classObject: Class<*>) {
+	private fun createTable(classObject: Class<*>) {
 		try {
 			TableUtils.createTable(getConnectionSource(), classObject)
 		} catch (e: SQLException) {
 			Log.d(DatabaseHelper::class.java.name, "Can't create database", e)
 			throw RuntimeException(e)
 		}
-
 	}
 
-	override fun onUpgrade(db: SQLiteDatabase, connectionSource: ConnectionSource, oldVersion: Int, newVersion: Int) {
-		recreateDatabase()
-	}
+	override fun onUpgrade(
+		db: SQLiteDatabase,
+		connectionSource: ConnectionSource,
+		oldVersion: Int,
+		newVersion: Int
+	) = recreateDatabase()
 
-	fun <T> dropTable(classObject: Class<T>) {
+	private fun <T> dropTable(classObject: Class<T>) {
 		try {
 			TableUtils.dropTable<T, Any>(getConnectionSource(), classObject, true)
 
@@ -59,7 +73,7 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 	/**
 	 * Drops all tables.
 	 */
-	fun dropDatabase() {
+	private fun dropDatabase() {
 		for (classObject in configuration!!.modelClasses) {
 			dropTable(classObject)
 		}
@@ -72,36 +86,15 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 	}
 
 	@Throws(java.sql.SQLException::class)
-	override fun <D : com.j256.ormlite.dao.Dao<T, *>, T> getDao(clazz: java.lang.Class<T>): D {
-		val dao: D? = cachedDaos[clazz] as D?
-		return if (dao != null) {
-			dao
+	override fun <D : Dao<T, *>, T> getDao(clazz: Class<T>): D {
+		val cachedDao = cachedDaos[clazz]
+		return if (cachedDao != null) {
+			 cachedDao as? D? ?: throw IllegalStateException("")
 		} else {
-			val superDao = super.getDao(clazz)
+			// fetch new Dao
+			val superDao = super.getDao(clazz) as D
 			cachedDaos[clazz] = superDao
-			superDao as D
-		}
-	}
-
-	companion object {
-		@JvmStatic
-		private var configuration: DatabaseConfiguration? = null
-		@JvmStatic
-		protected val cachedDaos = HashMap<Class<*>, Dao<*, *>>()
-
-		@JvmStatic
-		fun getHelper(context: Context): DatabaseHelper {
-			return OpenHelperManager.getHelper(context, DatabaseHelper::class.java)
-		}
-
-		@JvmStatic
-		fun <T : DatabaseHelper> getHelper(context: Context, classObject: Class<T>): T {
-			return OpenHelperManager.getHelper(context, classObject)
-		}
-
-		@JvmStatic
-		fun releaseHelper() {
-			OpenHelperManager.releaseHelper()
+			superDao
 		}
 	}
 }
