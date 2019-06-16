@@ -1,24 +1,24 @@
-package poetry.test
+package poetry.android.test
 
-import android.support.test.InstrumentationRegistry
+import androidx.test.platform.app.InstrumentationRegistry
 import com.j256.ormlite.dao.Dao
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import poetry.android.test.data.getDatabaseHelper
+import poetry.android.test.data.loadJsonObject
+import poetry.android.test.data.models.Group
+import poetry.android.test.data.models.User
 import poetry.database.DatabaseHelper.Companion.releaseHelper
 import poetry.json.JsonPathResolver
 import poetry.json.JsonPersister
-import poetry.test.data.getDatabaseHelper
-import poetry.test.data.loadJsonObject
-import poetry.test.data.models.Group
-import poetry.test.data.models.User
 
 class JsonTestCaseKotlin {
 
 	@Test
 	@Throws(Exception::class)
 	fun testJsonMapper() {
-		val context = InstrumentationRegistry.getContext()
+		val context = InstrumentationRegistry.getInstrumentation().context
 		val helper = getDatabaseHelper(context)
 
 		// Load JSON

@@ -3,7 +3,6 @@ package poetry.reflection
 import com.j256.ormlite.dao.ForeignCollection
 import com.j256.ormlite.field.DatabaseField
 import com.j256.ormlite.table.DatabaseTable
-import poetry.annotations.Nullable
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 
@@ -133,7 +132,7 @@ object OrmliteReflection {
 			null
 		} else {
 			// Recursively check superclass
-			findIdField(annotationRetriever, modelClass.superclass)
+			findIdField(annotationRetriever, modelClass.superclass as Class<*>)
 		}
 	}
 
@@ -159,7 +158,7 @@ object OrmliteReflection {
 			null
 		} else {
 			// Recursively check superclass
-			findForeignField(annotationRetriever, parentClass.superclass, findClass)
+			findForeignField(annotationRetriever, parentClass.superclass as Class<*>, findClass)
 		}
 	}
 }

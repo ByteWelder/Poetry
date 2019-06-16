@@ -1,7 +1,6 @@
-package poetry.test;
+package poetry.android.test;
 
 import android.content.Context;
-import android.support.test.InstrumentationRegistry;
 
 import com.j256.ormlite.dao.Dao;
 
@@ -11,16 +10,17 @@ import org.junit.Test;
 
 import java.util.List;
 
+import androidx.test.platform.app.InstrumentationRegistry;
 import poetry.json.JsonPathResolver;
 import poetry.json.JsonPersister;
-import poetry.test.data.DatabaseHelper;
-import poetry.test.data.models.Group;
-import poetry.test.data.models.User;
+import poetry.android.test.data.DatabaseHelper;
+import poetry.android.test.data.models.Group;
+import poetry.android.test.data.models.User;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static poetry.test.data.DatabaseHelperKt.getDatabaseHelper;
-import static poetry.test.data.JsonLoaderKt.loadJsonObject;
+import static poetry.android.test.data.DatabaseHelperKt.getDatabaseHelper;
+import static poetry.android.test.data.JsonLoaderKt.loadJsonObject;
 
 /**
  * This test case is to verify Java syntax compatibility.
@@ -30,7 +30,7 @@ public class JsonTestCaseJava
 	@Test
 	public void testJsonMapper() throws Exception
 	{
-		Context context = InstrumentationRegistry.getContext();
+		Context context = InstrumentationRegistry.getInstrumentation().getContext();
 		DatabaseHelper helper = getDatabaseHelper(context);
 
 		// Load JSON

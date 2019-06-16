@@ -1,4 +1,4 @@
-package poetry.test.data.models;
+package poetry.android.test.data.models;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;

@@ -1,12 +1,12 @@
-package poetry.test.data
+package poetry.android.test.data
 
 import android.content.Context
 import com.j256.ormlite.android.apptools.OpenHelperManager
 import poetry.database.DatabaseConfiguration
-import poetry.test.data.models.Group
-import poetry.test.data.models.User
-import poetry.test.data.models.UserGroup
-import poetry.test.data.models.UserTag
+import poetry.android.test.data.models.Group
+import poetry.android.test.data.models.User
+import poetry.android.test.data.models.UserGroup
+import poetry.android.test.data.models.UserTag
 
 fun getDatabaseHelper(context: Context): DatabaseHelper =
 	OpenHelperManager.getHelper(context, DatabaseHelper::class.java)
