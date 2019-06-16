@@ -1,4 +1,4 @@
-package poetry.json.annotations
+package poetry.annotations
 
 /**
  * Specifies that the foreign collection is one of base types, e.g. an array of String objects.

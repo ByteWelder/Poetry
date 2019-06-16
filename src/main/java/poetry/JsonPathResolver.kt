@@ -1,4 +1,4 @@
-package poetry.json
+package poetry
 
 import org.json.JSONArray
 import org.json.JSONObject

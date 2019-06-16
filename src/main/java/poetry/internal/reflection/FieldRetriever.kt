@@ -1,8 +1,7 @@
-package poetry.reflection
+package poetry.internal.reflection
 
-import poetry.json.annotations.MapFrom
+import poetry.annotations.MapFrom
 import java.lang.reflect.Field
-import java.util.*
 
 /**
  * FieldRetriever caches [Field] objects to improve performance.
@@ -16,7 +15,7 @@ import java.util.*
  *
  * Reference: http://grepcode.com/file/repo1.maven.org/maven2/org.robolectric/android-all/4.4_r1-robolectric-1/libcore/reflect/AnnotationAccess.java#AnnotationAccess.getDeclaredAnnotation%28java.lang.reflect.AnnotatedElement%2Cjava.lang.Class%29
  */
-class FieldRetriever {
+internal class FieldRetriever {
 	// Maps: model class -> json type -> Field instance
 	private val fieldJsonCache = HashMap<Class<*>, HashMap<String, Field?>>()
 	// Maps: model class -> field type -> Field instance
@@ -45,19 +44,19 @@ class FieldRetriever {
 	}
 
 	private fun getCachedField(classObject: Class<*>, fieldName: String): Field? {
-		val field_map = fieldJsonCache[classObject]
-		return if (field_map != null) field_map[fieldName] else null
+		val fieldMap = fieldJsonCache[classObject]
+		return if (fieldMap != null) fieldMap[fieldName] else null
 	}
 
 	private fun setCachedField(classObject: Class<*>, fieldName: String, field: Field?) {
-		var field_map = fieldJsonCache[classObject]
+		var fieldMap = fieldJsonCache[classObject]
 
-		if (field_map == null) {
-			field_map = HashMap()
-			fieldJsonCache[classObject] = field_map
+		if (fieldMap == null) {
+			fieldMap = HashMap()
+			fieldJsonCache[classObject] = fieldMap
 		}
 
-		field_map[fieldName] = field
+		fieldMap[fieldName] = field
 	}
 
 	/**
@@ -138,17 +137,15 @@ class FieldRetriever {
 		 * @return the found first Field of the specified type or null
 		 */
 		fun findFirstFieldOfType(parentClass: Class<*>, fieldClass: Class<*>): Field? {
-			for (field in parentClass.declaredFields) {
-				if (field.type == fieldClass) {
-					return field
-				}
+			val field = parentClass.declaredFields.firstOrNull { it.type == fieldClass }
+			if (field != null) {
+				return field
 			}
 
-			return if (parentClass.superclass == null) {
-				null
-			} else findFirstFieldOfType(parentClass.superclass!!, fieldClass)
-
 			// Recursively check superclass
+			return parentClass.superclass?.let { superClass ->
+				findFirstFieldOfType(superClass, fieldClass)
+			}
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package poetry.json
+package poetry
 
 class JsonPathException : Exception {
 	constructor(message: String) : super(message)

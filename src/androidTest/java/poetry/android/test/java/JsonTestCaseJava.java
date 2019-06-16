@@ -13,8 +13,8 @@ import poetry.android.test.internal.DatabaseHelperRule;
 import poetry.android.test.java.data.DatabaseHelper;
 import poetry.android.test.java.data.models.Group;
 import poetry.android.test.java.data.models.User;
-import poetry.json.JsonPathResolver;
-import poetry.json.JsonPersister;
+import poetry.JsonPathResolver;
+import poetry.JsonPersister;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

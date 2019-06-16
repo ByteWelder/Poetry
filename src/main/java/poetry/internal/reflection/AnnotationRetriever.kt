@@ -1,8 +1,6 @@
-package poetry.reflection
+package poetry.internal.reflection
 
-import poetry.annotations.Nullable
 import java.lang.reflect.Field
-import java.util.*
 
 /**
  * AnnotationRetriever caches annotations to improve performance.
@@ -16,7 +14,7 @@ import java.util.*
  *
  * Reference: http://grepcode.com/file/repo1.maven.org/maven2/org.robolectric/android-all/4.4_r1-robolectric-1/libcore/reflect/AnnotationAccess.java#AnnotationAccess.getDeclaredAnnotation%28java.lang.reflect.AnnotatedElement%2Cjava.lang.Class%29
  */
-class AnnotationRetriever {
+internal class AnnotationRetriever {
 	private val fieldAnnotationCache = HashMap<Field, HashMap<Class<out Annotation>, Annotation?>>()
 	private val classAnnotationCache = HashMap<Class<*>, HashMap<Class<out Annotation>, Annotation?>>()
 

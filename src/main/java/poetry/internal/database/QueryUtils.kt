@@ -1,9 +1,9 @@
-package poetry.utils
+package poetry.internal.database
 
 import java.security.InvalidParameterException
 import java.util.*
 
-object QueryUtils {
+internal object QueryUtils {
 	/**
 	 * Convert an Object to a String so that it can be used as a query parameter.
 	 * This method supports objects instantiated or derived from:

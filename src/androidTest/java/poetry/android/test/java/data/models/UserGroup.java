@@ -3,7 +3,7 @@ package poetry.android.test.java.data.models;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
-import poetry.json.annotations.MapFrom;
+import poetry.annotations.MapFrom;
 
 /**
  * Maps a User onto a Group

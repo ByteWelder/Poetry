@@ -1,4 +1,4 @@
-package poetry.json
+package poetry.internal
 
 import android.content.ContentValues
 import org.json.JSONException

@@ -87,9 +87,9 @@ In the example below, you can see a custom `DatabaseHelper` with a `DatabaseConf
 import android.database.sqlite.SQLiteDatabase;
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.support.ConnectionSource;
-import poetry.database.DatabaseConfiguration;
+import poetry.DatabaseConfiguration;
 
-public class MyDatabaseHelper extends poetry.database.DatabaseHelper
+public class MyDatabaseHelper extends poetry.DatabaseHelper
 {
     public final static DatabaseConfiguration sConfiguration = new DatabaseConfiguration(1, new Class<?>[]
     {

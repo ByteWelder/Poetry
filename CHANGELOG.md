@@ -9,6 +9,8 @@
 - General cleanup
 - Removed deprecated `JsonPathResolver.resolvePath()`
 - Removed create/release database helper method: use `OpenHelperManager` from ORMLite instead
+- Removed DaoUtils
+- Moved classes in more logical packages
 
 ## 4.0.0
 

@@ -2,7 +2,7 @@ package poetry.android.test.kotlin.data.models
 
 import com.j256.ormlite.field.DatabaseField
 import com.j256.ormlite.table.DatabaseTable
-import poetry.json.annotations.MapFrom
+import poetry.annotations.MapFrom
 
 @DatabaseTable
 class Group(

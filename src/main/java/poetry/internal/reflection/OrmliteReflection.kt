@@ -1,4 +1,4 @@
-package poetry.reflection
+package poetry.internal.reflection
 
 import com.j256.ormlite.dao.ForeignCollection
 import com.j256.ormlite.field.DatabaseField
@@ -10,7 +10,7 @@ import java.lang.reflect.ParameterizedType
  * A set of reflection utilities for OrmLite to process and retrieve fields and annotations.
  */
 // TODO: most of these calls should be cached as is done in AnnotationRetriever/FieldRetriever
-object OrmliteReflection {
+internal object OrmliteReflection {
 	// Reference: http://sourceforge.net/p/ormlite/code/HEAD/tree/ormlite-core/trunk/src/main/java/com/j256/ormlite/field/FieldType.java
 	private const val FOREIGN_ID_FIELD_SUFFIX = "_id"
 
@@ -63,7 +63,7 @@ object OrmliteReflection {
 	fun getFieldName(field: Field, databaseField: DatabaseField): String {
 		return if (!databaseField.columnName.isEmpty()) {
 			databaseField.columnName
-		} else if (OrmliteReflection.isForeign(databaseField)) {
+		} else if (isForeign(databaseField)) {
 			field.name + FOREIGN_ID_FIELD_SUFFIX
 		} else {
 			field.name
@@ -77,9 +77,9 @@ object OrmliteReflection {
 	 * @return true if foreign() is true, foreignAutoRefresh() is true or foreignColumnName() is set to a non-empty string
 	 */
 	fun isForeign(databaseField: DatabaseField): Boolean {
-		return (databaseField.foreign
+		return databaseField.foreign
 				|| databaseField.foreignAutoRefresh
-				|| !databaseField.foreignColumnName.isEmpty())
+				|| databaseField.foreignColumnName.isNotEmpty()
 	}
 
 	/**
@@ -88,9 +88,7 @@ object OrmliteReflection {
 	 * @param databaseField the annotation to check
 	 * @return true if id() or generatedId() are true
 	 */
-	fun isId(databaseField: DatabaseField): Boolean {
-		return databaseField.id || databaseField.generatedId
-	}
+	fun isId(databaseField: DatabaseField) = databaseField.id || databaseField.generatedId
 
 	/**
 	 * Retrieves the generic type argument: the type that is held by the specified ForeignCollection Field

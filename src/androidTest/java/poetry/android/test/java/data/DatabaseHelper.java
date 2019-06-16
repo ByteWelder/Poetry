@@ -11,9 +11,9 @@ import poetry.android.test.java.data.models.Group;
 import poetry.android.test.java.data.models.User;
 import poetry.android.test.java.data.models.UserGroup;
 import poetry.android.test.java.data.models.UserTag;
-import poetry.database.DatabaseConfiguration;
+import poetry.DatabaseConfiguration;
 
-public class DatabaseHelper extends poetry.database.DatabaseHelper
+public class DatabaseHelper extends poetry.DatabaseHelper
 {
 	private final static DatabaseConfiguration sConfiguration = new DatabaseConfiguration(
 		1,

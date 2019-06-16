@@ -11,8 +11,8 @@ import poetry.android.test.internal.loadJsonObject
 import poetry.android.test.kotlin.data.DatabaseHelper
 import poetry.android.test.kotlin.data.models.Group
 import poetry.android.test.kotlin.data.models.User
-import poetry.json.JsonPathResolver
-import poetry.json.JsonPersister
+import poetry.JsonPathResolver
+import poetry.JsonPersister
 
 class JsonTestCaseKotlin {
 	@get:Rule

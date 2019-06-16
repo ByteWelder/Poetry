@@ -1,4 +1,4 @@
-package poetry.database
+package poetry
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -8,7 +8,6 @@ import com.j256.ormlite.dao.Dao
 import com.j256.ormlite.support.ConnectionSource
 import com.j256.ormlite.table.TableUtils
 import java.sql.SQLException
-import java.util.*
 
 open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 
@@ -29,7 +28,7 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 
 	constructor(context: Context, configuration: DatabaseConfiguration) : super(context, configuration.databaseName, null, configuration.modelVersion) {
 
-		DatabaseHelper.configuration = configuration
+		Companion.configuration = configuration
 	}
 
 	override fun onCreate(db: SQLiteDatabase, connectionSource: ConnectionSource) {

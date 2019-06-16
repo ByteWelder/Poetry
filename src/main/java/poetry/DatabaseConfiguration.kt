@@ -1,4 +1,4 @@
-package poetry.database
+package poetry
 
 class DatabaseConfiguration @JvmOverloads constructor(
 	val modelVersion: Int,

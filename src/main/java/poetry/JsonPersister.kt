@@ -1,4 +1,4 @@
-package poetry.json
+package poetry
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
@@ -11,14 +11,16 @@ import com.j256.ormlite.table.DatabaseTable
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import poetry.json.annotations.ForeignCollectionFieldSingleTarget
-import poetry.json.annotations.ManyToManyField
-import poetry.reflection.AnnotationRetriever
-import poetry.reflection.FieldRetriever
-import poetry.reflection.OrmliteReflection
-import poetry.utils.QueryUtils
+import poetry.annotations.ForeignCollectionFieldSingleTarget
+import poetry.annotations.ManyToManyField
+import poetry.internal.JsonUtils
+import poetry.internal.database.QueryUtils
+import poetry.internal.database.enableWriteAheadLoggingSafely
+import poetry.internal.database.transactionNonExclusive
+import poetry.internal.reflection.AnnotationRetriever
+import poetry.internal.reflection.FieldRetriever
+import poetry.internal.reflection.OrmliteReflection
 import java.lang.reflect.Field
-import java.util.*
 
 /**
  * Persist a JSONObject or JSONArray to an SQLite database by parsing annotations (both from OrmLite and custom ones).
@@ -45,22 +47,12 @@ class JsonPersister
 	</IdType> */
 	@Throws(JSONException::class)
 	fun <IdType> persistObject(modelClass: Class<*>, jsonObject: JSONObject): IdType {
-		if (Looper.myLooper() == Looper.getMainLooper()) {
-			Log.w(javaClass.name, "please call persistObject() on a background thread")
-		}
+		warnIfOnMainThread("persistObject()")
 
-		try {
-			enableWriteAheadLogging()
+		database.enableWriteAheadLoggingSafely()
 
-			database.beginTransactionNonExclusive()
-
-			val id = persistObjectInternal<IdType>(modelClass, jsonObject)
-
-			database.setTransactionSuccessful()
-
-			return id
-		} finally {
-			endTransaction()
+		return database.transactionNonExclusive {
+			persistObjectInternal(modelClass, jsonObject)
 		}
 	}
 
@@ -75,46 +67,12 @@ class JsonPersister
 	 */
 	@Throws(JSONException::class)
 	fun <IdType> persistArray(modelClass: Class<*>, jsonArray: JSONArray): List<IdType> {
-		if (Looper.myLooper() == Looper.getMainLooper()) {
-			Log.w(javaClass.name, "please call persistArray() on a background thread")
-		}
+		warnIfOnMainThread("persistArray()")
 
-		try {
-			enableWriteAheadLogging()
+		database.enableWriteAheadLoggingSafely()
 
-			database.beginTransactionNonExclusive()
-
-			val idList = persistArrayOfObjects<IdType>(modelClass, jsonArray)
-
-			database.setTransactionSuccessful()
-
-			return idList
-		} catch (e: JSONException) {
-			throw e
-		} finally {
-			endTransaction()
-		}
-	}
-
-	private fun enableWriteAheadLogging() {
-		try {
-			// Write Ahead Logging (WAL) mode cannot be enabled or disabled while there are transactions in progress.
-			if (!database.inTransaction()) {
-				database.enableWriteAheadLogging()
-			}
-		} catch (e: IllegalStateException) {
-			Log.w(javaClass.name, "Write Ahead Logging is not enabled because a transaction was active")
-		}
-
-	}
-
-	private fun endTransaction() {
-		if (database.inTransaction()) {
-			try {
-				database.endTransaction()
-			} catch (e: IllegalStateException) {
-				Log.w(javaClass.name, "endTransaction() failed - this does not mean there was a rollback, it just means that the transaction was closed earlier than expeced.")
-			}
+		return database.transactionNonExclusive {
+			persistArrayOfObjects(modelClass, jsonArray)
 		}
 	}
 
@@ -491,5 +449,11 @@ class JsonPersister
 		 * @return true when all the options from optionCheck are contained in optionsSet
 		 */
 		private fun isOptionEnabled(optionsSet: Int, optionCheck: Int): Boolean = optionsSet and optionCheck == optionCheck
+	}
+}
+
+private fun warnIfOnMainThread(methodName: String) {
+	if (Looper.myLooper() == Looper.getMainLooper()) {
+		Log.w(JsonPersister::class.java.name, "Don't call $methodName from the main thread")
 	}
 }

@@ -1,4 +1,4 @@
-package poetry.json.annotations
+package poetry.annotations
 
 /**
  * Specify the JSON property (and optionally a child object) to map from

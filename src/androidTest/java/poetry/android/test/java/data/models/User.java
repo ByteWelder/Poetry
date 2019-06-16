@@ -8,9 +8,9 @@ import com.j256.ormlite.table.DatabaseTable;
 import java.util.ArrayList;
 import java.util.List;
 
-import poetry.json.annotations.ForeignCollectionFieldSingleTarget;
-import poetry.json.annotations.ManyToManyField;
-import poetry.json.annotations.MapFrom;
+import poetry.annotations.ForeignCollectionFieldSingleTarget;
+import poetry.annotations.ManyToManyField;
+import poetry.annotations.MapFrom;
 
 @DatabaseTable
 public class User

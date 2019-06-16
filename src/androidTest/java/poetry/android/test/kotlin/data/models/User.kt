@@ -4,9 +4,9 @@ import com.j256.ormlite.dao.ForeignCollection
 import com.j256.ormlite.field.DatabaseField
 import com.j256.ormlite.field.ForeignCollectionField
 import com.j256.ormlite.table.DatabaseTable
-import poetry.json.annotations.ForeignCollectionFieldSingleTarget
-import poetry.json.annotations.ManyToManyField
-import poetry.json.annotations.MapFrom
+import poetry.annotations.ForeignCollectionFieldSingleTarget
+import poetry.annotations.ManyToManyField
+import poetry.annotations.MapFrom
 
 @DatabaseTable
 class User(
