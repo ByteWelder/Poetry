@@ -26,8 +26,10 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 			configuration!!.modelVersion
 	)
 
-	constructor(context: Context, configuration: DatabaseConfiguration) : super(context, configuration.databaseName, null, configuration.modelVersion) {
-
+	constructor(
+		context: Context,
+		configuration: DatabaseConfiguration
+	) : super(context, configuration.databaseName, null, configuration.modelVersion) {
 		Companion.configuration = configuration
 	}
 
