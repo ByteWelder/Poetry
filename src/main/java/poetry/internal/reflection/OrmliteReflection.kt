@@ -21,7 +21,7 @@ internal object OrmliteReflection {
 	 * @param modelClass          an OrmLite model class annotated with [DatabaseTable]
 	 * @return the SQLite table name
 	 */
-	fun getTableName(annotationRetriever: AnnotationRetriever, modelClass: Class<*>): String {
+	fun getTableName(annotationRetriever: ClassAnnotationRetriever, modelClass: Class<*>): String {
 		val tableAnnotation = annotationRetriever.getAnnotation(modelClass, DatabaseTable::class.java)
 				?: throw RuntimeException("DatabaseTable annotation not found for " + modelClass.name)
 
@@ -46,7 +46,7 @@ internal object OrmliteReflection {
 	 * @param field               the model's field
 	 * @return the SQLite column name
 	 */
-	fun getFieldName(annotationRetriever: AnnotationRetriever, field: Field): String {
+	fun getFieldName(annotationRetriever: FieldAnnotationRetriever, field: Field): String {
 		val databaseField = annotationRetriever.getAnnotation(field, DatabaseField::class.java)
 				?: throw RuntimeException("DatabaseField annotation not found in " + field.declaringClass.name + " for " + field.name)
 
@@ -116,7 +116,7 @@ internal object OrmliteReflection {
 	 * @param modelClass          the class to find the ID field in
 	 * @return the Field or null
 	 */
-	fun findIdField(annotationRetriever: AnnotationRetriever, modelClass: Class<*>): Field? {
+	fun findIdField(annotationRetriever: FieldAnnotationRetriever, modelClass: Class<*>): Field? {
 		for (field in modelClass.declaredFields) {
 			val databaseField = annotationRetriever.getAnnotation(field, DatabaseField::class.java)
 					?: continue
@@ -142,7 +142,7 @@ internal object OrmliteReflection {
 	 * @param findClass           the field class to search for
 	 * @return a Field or null
 	 */
-	fun findForeignField(annotationRetriever: AnnotationRetriever, parentClass: Class<*>, findClass: Class<*>): Field? {
+	fun findForeignField(annotationRetriever: FieldAnnotationRetriever, parentClass: Class<*>, findClass: Class<*>): Field? {
 		for (field in parentClass.declaredFields) {
 			val databaseField = annotationRetriever.getAnnotation(field, DatabaseField::class.java)
 			if (databaseField != null
