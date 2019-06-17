@@ -1,6 +1,5 @@
 ## 5.0.0
 
-- AndroidX
 - Android minimum SDK 21
 - Android target/build SDK 29
 - Android Gradle plugin 3.4.1
@@ -11,6 +10,8 @@
 - Removed create/release database helper method: use `OpenHelperManager` from ORMLite instead
 - Removed DaoUtils
 - Moved classes in more logical packages
+- Removed `JsonPathResolver` and related classes
+- AndroidX for tests (this dependency is not used in production code)
 
 ## 4.0.0
 
