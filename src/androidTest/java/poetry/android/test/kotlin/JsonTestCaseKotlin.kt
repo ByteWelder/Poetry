@@ -5,14 +5,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
+import poetry.JsonPersister
 import poetry.android.test.R
 import poetry.android.test.internal.DatabaseHelperRule
 import poetry.android.test.internal.loadJsonObject
 import poetry.android.test.kotlin.data.DatabaseHelper
 import poetry.android.test.kotlin.data.models.Group
 import poetry.android.test.kotlin.data.models.User
-import poetry.JsonPathResolver
-import poetry.JsonPersister
 
 class JsonTestCaseKotlin {
 	@get:Rule
@@ -25,8 +24,8 @@ class JsonTestCaseKotlin {
 		val json = loadJsonObject(R.raw.test)
 
 		// Get child arrays from JSON
-		val usersJson = JsonPathResolver.resolveArray(json, "users")
-		val groupsJson = JsonPathResolver.resolveArray(json, "groups")
+		val usersJson = json.getJSONArray("users")
+		val groupsJson = json.getJSONArray("groups")
 
 		// Persist arrays to database
 		val persister = JsonPersister(helperRule.helper.writableDatabase)

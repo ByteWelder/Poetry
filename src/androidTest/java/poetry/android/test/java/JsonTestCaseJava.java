@@ -9,12 +9,11 @@ import org.junit.Test;
 
 import java.util.List;
 
+import poetry.JsonPersister;
 import poetry.android.test.internal.DatabaseHelperRule;
 import poetry.android.test.java.data.DatabaseHelper;
 import poetry.android.test.java.data.models.Group;
 import poetry.android.test.java.data.models.User;
-import poetry.JsonPathResolver;
-import poetry.JsonPersister;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -35,8 +34,8 @@ public class JsonTestCaseJava
 		JSONObject json = loadJsonObject(poetry.android.test.R.raw.test);
 
 		// Get child arrays from JSON
-		JSONArray usersJson = JsonPathResolver.resolveArray(json, "users");
-		JSONArray groupsJson = JsonPathResolver.resolveArray(json, "groups");
+		JSONArray usersJson = json.getJSONArray("users");
+		JSONArray groupsJson = json.getJSONArray("groups");
 
 		// Persist arrays to database
 		JsonPersister persister = new JsonPersister(helperRule.helper.getWritableDatabase());
