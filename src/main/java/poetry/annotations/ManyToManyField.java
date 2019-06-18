@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specify that a collection has a many-to-many relation ship with an intermediary table to connect them.
+ * Specify that a collection has a many-to-many relationship with an intermediary table to connect them.
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

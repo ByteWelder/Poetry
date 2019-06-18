@@ -15,21 +15,45 @@ import poetry.annotations.ForeignCollectionFieldSingleTarget
 import poetry.annotations.ManyToManyField
 import poetry.internal.JsonUtils
 import poetry.internal.database.QueryUtils
+import poetry.internal.database.createRowIfNotExists
 import poetry.internal.database.enableWriteAheadLoggingSafely
+import poetry.internal.database.putOrThrow
 import poetry.internal.database.transactionNonExclusive
+import poetry.internal.getValue
 import poetry.internal.reflection.ClassAnnotationRetriever
 import poetry.internal.reflection.FieldAnnotationRetriever
 import poetry.internal.reflection.FieldRetriever
-import poetry.internal.reflection.OrmliteReflection
+import poetry.internal.reflection.findForeignField
+import poetry.internal.reflection.findIdField
+import poetry.internal.reflection.findIdFieldOrThrow
+import poetry.internal.reflection.getColumnNameForField
+import poetry.internal.reflection.getForeignCollectionParameterType
+import poetry.internal.reflection.getTableName
+import poetry.internal.reflection.isForeign
+import poetry.internal.reflection.isId
+import poetry.internal.toIterable
+import poetry.internal.toIterableJsonObject
 import java.lang.reflect.Field
+
+private const val logTag = "JsonPersister"
+
+private class IdDescriptor(val columnName: String, val id: Any) {
+	companion object {
+		val None: IdDescriptor = IdDescriptor("", 0)
+	}
+}
+
+/**
+ * All necessary data to map an array of objects onto the provided parent field.
+ */
+private class ForeignCollectionMapping(val field: Field, val jsonArray: JSONArray)
+
 
 /**
  * Persist a JSONObject or JSONArray to an SQLite database by parsing annotations (both from OrmLite and custom ones).
  */
 class JsonPersister
 /**
- * Constructor.
- *
  * @param database the database used for persistence
  * @param options 0 or a combination of 1 or more options as defined by [JsonPersister].OPTION_*
  */
@@ -90,299 +114,188 @@ class JsonPersister
 	@Throws(JSONException::class)
 	private fun <IdType> persistObjectInternal(modelClass: Class<*>, jsonObject: JSONObject): IdType {
 		val tableAnnotation = modelClass.getAnnotation(DatabaseTable::class.java)
-				?: throw RuntimeException("DatabaseTable annotation not found for " + modelClass.name)
+				?: throw RuntimeException("DatabaseTable annotation not found for ${modelClass.name}")
 
 		val values = ContentValues()
-		val jsonKeys = jsonObject.keys()
 		val foreignCollectionMappings = ArrayList<ForeignCollectionMapping>()
+		val tableName = getTableName(modelClass, tableAnnotation)
 
-		val tableName = OrmliteReflection.getTableName(modelClass, tableAnnotation)
-
-		// We want to know the object ID because we need it to resolve one-to-many relationships (foreign collection fields)
-		var idFieldName: String? = null
-		var objectId: Any? = null
+		// We want the id so we can return it,
+		// but we also it to resolve one-to-many relationships (foreign collection fields)
+		var idDescriptor: IdDescriptor = IdDescriptor.None
 
 		// Process all JSON keys and map them to the database
-		while (jsonKeys.hasNext()) {
-			// Get the next key
-			val jsonKey = jsonKeys.next() as String
-
+		jsonObject.keys().asSequence().forEach { jsonKey ->
 			// Find a Field with the same name as the key
 			// TODO: use JsonProperty annotation to get an optional name override
-
 			val field = fieldRetriever.getField(modelClass, jsonKey)
-
-			if (field == null) {
+			if (field != null) {
+				val databaseField = fieldAnnotationRetriever.findAnnotation(field, DatabaseField::class.java)
+				// DatabaseField is used for: object IDs, simple key-values and one-to-one relationships
+				if (databaseField != null) {
+					// Object IDs are a special case because we need to insert a new object if the object doesn't exist yet
+					// and we also want to retrieve the value to return it in this method and to resolve one-to-many relationships for child objects
+					if (databaseField.isId()) {
+						if (idDescriptor != IdDescriptor.None) {
+							throw JSONException("Trying to set id twice for ${modelClass.name} with id ${idDescriptor.id}")
+						}
+						idDescriptor = createRowIfNotExists(jsonObject, jsonKey, field, databaseField, tableName)
+					} else { // object exists, so process its value or reference
+						processDatabaseField(databaseField, field, jsonObject, jsonKey, modelClass, values)
+					}
+				} else { // check if we have a ForeignCollectionField (which is used for one-to-many relationships)
+					val foreignCollectionField = fieldAnnotationRetriever.findAnnotation(field, ForeignCollectionField::class.java)
+					if (foreignCollectionField != null) {
+						val jsonArray = jsonObject.optJSONArray(jsonKey)
+						if (jsonArray == null) {
+							Log.w(logTag, "There was a recoverable JSON error: Mapping ${field.name} for type ${field.type.name} was null.")
+						} else {
+							val foreignCollectionMapping = ForeignCollectionMapping(field, jsonArray)
+							foreignCollectionMappings.add(foreignCollectionMapping)
+						}
+					}
+				}
+			} else {
 				if (!isOptionEnabled(options, OPTION_DISABLE_IGNORED_ATTRIBUTES_WARNING)) {
-					Log.w(javaClass.name, String.format("ignored attribute %s because it wasn't found in %s as a DatabaseField", jsonKey, modelClass.simpleName))
-				}
-
-				continue
-			}
-
-			val databaseField = fieldAnnotationRetriever.getAnnotation(field, DatabaseField::class.java)
-
-			// DatabaseField is used for: object IDs, simple key-values and one-to-one relationships
-			if (databaseField != null) {
-				// Object IDs are a special case because we need to insert a new object if the object doesn't exist yet
-				// and we also want to retrieve the value to return it in this method and to resolve one-to-many relationships for child objects
-				if (OrmliteReflection.isId(databaseField)) {
-					objectId = processIdField(databaseField, field, jsonObject, jsonKey, tableName)
-					idFieldName = OrmliteReflection.getFieldName(field, databaseField)
-				} else
-				// object exists, so process its value or reference
-				{
-					processDatabaseField(databaseField, field, jsonObject, jsonKey, modelClass, values)
-				}
-			} else { // check if we have a ForeignCollectionField (which is used for one-to-many relationships)
-				val foreignCollectionField = fieldAnnotationRetriever.getAnnotation(field, ForeignCollectionField::class.java)
-
-				if (foreignCollectionField != null) {
-					val jsonArray = if (!jsonObject.isNull(jsonKey)) jsonObject.getJSONArray(jsonKey) else null
-
-					val foreignCollectionMapping = ForeignCollectionMapping(field, jsonArray)
-					foreignCollectionMappings.add(foreignCollectionMapping)
+					Log.w(logTag, "ignored attribute $jsonKey because it wasn't found in ${modelClass.simpleName} as a DatabaseField")
 				}
 			}
 		}
 
-		// Determine the object ID
-		if (objectId == null || idFieldName == null) {
-			val idField = OrmliteReflection.findIdField(fieldAnnotationRetriever, modelClass)
-					?: throw SQLiteException("class ${modelClass.name} doesn't have a DatabaseField that is marked as being an ID")
-
-			val idDatabaseField = fieldAnnotationRetriever.getAnnotation(idField, DatabaseField::class.java)
-
-			// we don't have to check for id_database_field being null because OrmliteReflection.findIdField implied it is there
-			val idDatabaseFieldSafe = checkNotNull(idDatabaseField) { "unexpected null in id_database_field" }
-			idFieldName = OrmliteReflection.getFieldName(idField, idDatabaseFieldSafe)
-
-			val insertedId = database.insert("'$tableName'", idFieldName, ContentValues())
-
-			if (insertedId == -1L) {
-				throw SQLiteException("failed to insert " + modelClass.name + " with id field " + idFieldName)
-			}
-
-			objectId = insertedId
+		// None of the JSON values represented an id, so try to find it in the class
+		if (idDescriptor == IdDescriptor.None) {
+			idDescriptor = insertRowFromModelClass(tableName, modelClass)
 		}
 
-		// Process regular fields
+		// Update id field
+		// TODO: Is this really necessary? We should already have this in the database by now?!
 		if (values.size() > 0) {
-			database.update("'$tableName'", values, "$idFieldName = ?", arrayOf(objectId.toString()))
+			database.update("'$tableName'", values, "${idDescriptor.columnName} = ?", arrayOf(idDescriptor.id.toString()))
 		}
 
-		Log.i(javaClass.name, String.format("imported %s (%s=%s)", modelClass.simpleName, idFieldName, objectId.toString()))
+		Log.i(logTag, "imported ${modelClass.simpleName} (${idDescriptor.columnName}=${idDescriptor.id})")
 
 		// Process foreign collection fields for inserted object
-		for (foreignCollectionMapping in foreignCollectionMappings) {
-			val manyToManyField = fieldAnnotationRetriever.getAnnotation(foreignCollectionMapping.field, ManyToManyField::class.java)
-
+		foreignCollectionMappings.forEach { mapping ->
+			val manyToManyField = fieldAnnotationRetriever.findAnnotation(mapping.field, ManyToManyField::class.java)
 			if (manyToManyField != null) {
-				processManyToMany(manyToManyField, foreignCollectionMapping, objectId, modelClass)
+				processManyToMany(manyToManyField, mapping, idDescriptor.id, modelClass)
 			} else {
-				processManyToOne(foreignCollectionMapping, objectId, modelClass)
+				processManyToOne(mapping, idDescriptor.id, modelClass)
 			}
 		}
 
-		return objectId as IdType
+		return idDescriptor.id as IdType
 	}
 
 	@Throws(JSONException::class)
 	private fun <IdType> persistArrayOfObjects(modelClass: Class<*>, jsonArray: JSONArray): List<IdType> {
-		val results = ArrayList<IdType>(jsonArray.length())
-
-		for (i in 0 until jsonArray.length()) {
-			val jsonObject = jsonArray.getJSONObject(i)
-			val objectId = persistObjectInternal<IdType>(modelClass, jsonObject)
-
-			results.add(objectId)
-		}
-
-		return results
-	}
-
-	@Throws(JSONException::class)
-	private fun persistArrayOfBaseTypes(modelClass: Class<*>, jsonArray: JSONArray, singleTargetField: ForeignCollectionFieldSingleTarget): List<Any> {
-		val tableAnnotation = modelClass.getAnnotation(DatabaseTable::class.java)
-				?: throw RuntimeException("DatabaseTable annotation not found for " + modelClass.name)
-
-		val tableName = OrmliteReflection.getTableName(modelClass, tableAnnotation)
-
-		val results = ArrayList<Any>(jsonArray.length())
-
-		for (i in 0 until jsonArray.length()) {
-			val valueObject = jsonArray.get(i)
-
-			val contentValues = ContentValues()
-			contentValues.put(singleTargetField.targetField, valueObject.toString())
-
-			val insertedId = database.insert("'$tableName'", singleTargetField.targetField, contentValues)
-
-			if (insertedId == -1L) {
-				throw SQLiteException("failed to insert " + modelClass.name)
-			}
-
-			results.add(insertedId)
-		}
-
-		return results
+		return jsonArray.toIterableJsonObject()
+				.map { persistObjectInternal<IdType>(modelClass, it) }
+				.toList()
 	}
 
 	/**
-	 * Process an ID field giving JSON input and serialization information.
-	 * If no object is found in the database, a new one is inserted and its ID is returned.
-	 *
-	 * @param databaseField the Ormlite annotation
-	 * @param field         the field that is annotated by databaseField
-	 * @param jsonObject    the object that is being mapped
-	 * @param jsonKey       the key where the value of the id field can be found within the jsonObject
-	 * @param tableName     the table to insert a new row in case the ID is not found in the database
-	 * @return the ID field value of this object (never null)
-	 * @throws JSONException when the ID field value cannot be determined
+	 * It's important that the JSONArray that is passed, only contains base types.
+	 * All its contents will be grabbed and converted with toString().
 	 */
 	@Throws(JSONException::class)
-	private fun processIdField(databaseField: DatabaseField, field: Field, jsonObject: JSONObject, jsonKey: String, tableName: String): Any {
-		val dbFieldName = OrmliteReflection.getFieldName(field, databaseField)
+	private fun persistArrayOfBaseTypes(modelClass: Class<*>, jsonArray: JSONArray, singleTargetField: ForeignCollectionFieldSingleTarget): List<Any> {
+		val tableAnnotation = modelClass.getAnnotation(DatabaseTable::class.java)
+				?: throw RuntimeException("DatabaseTable annotation not found for ${modelClass.name}")
+		val tableName = getTableName(modelClass, tableAnnotation)
 
-		val objectId = JsonUtils.getValue(jsonObject, jsonKey, field.type)
-				?: throw RuntimeException(String.format("failed to get a value from JSON with key %s and type %s", jsonKey, field.type.name))
+		return jsonArray.toIterable()
+				.map { it.toString() }
+				.map { valueString ->
+					ContentValues().apply {
+						put(singleTargetField.targetField, valueString)
+					}
+				}
+				.map { contentValues ->
+					database.insertOrThrow("'$tableName'", singleTargetField.targetField, contentValues)
+				}
+				.toList()
+	}
 
-		val sql = String.format("SELECT * FROM '%s' WHERE %s = ? LIMIT 1", tableName, dbFieldName)
-		val selectionArgs = arrayOf(objectId.toString())
-		val cursor = database.rawQuery(sql, selectionArgs)
-		val objectExists = cursor.count > 0
-		cursor.close()
-
-		if (objectExists) {
-			// return existing object id
-			return objectId
-		} else { // create object
-			val values = ContentValues(1)
-
-			if (!JsonUtils.copyValue(objectId, dbFieldName, values)) {
-				throw JSONException(String.format("failed to process id field %s for table %s and jsonKey %s", field.name, tableName, jsonKey))
-			}
-
-			val insertedId = database.insert("'$tableName'", null, values)
-
-			if (insertedId == -1L) {
-				throw SQLiteException(String.format("failed to insert %s with id %s=%s", field.type.name, dbFieldName, objectId.toString()))
-			}
-
-			Log.i(javaClass.name, String.format("prepared %s row (id=%s/%s)", tableName, objectId.toString(), java.lang.Long.toString(insertedId)))
-
-			return objectId // don't return inserted_id, because it's always long (while the target type might be int or another type)
-		}
+	/**
+	 * Based on the JSON input and RTTI, create a database row if it doesn't exist yet.
+	 */
+	@Throws(JSONException::class)
+	private fun createRowIfNotExists(jsonObject: JSONObject, jsonKey: String, field: Field, databaseField: DatabaseField, tableName: String): IdDescriptor {
+		val id = jsonObject.getValue(jsonKey, field.type)
+		val idColumnName = getColumnNameForField(field, databaseField)
+		// TODO: make test with String id
+		database.createRowIfNotExists(tableName, idColumnName, id)
+		return IdDescriptor(idColumnName, id)
 	}
 
 	@Throws(JSONException::class)
 	private fun processDatabaseField(databaseField: DatabaseField, field: Field, jsonParentObject: JSONObject, jsonKey: String, modelClass: Class<*>, values: ContentValues) {
-		val dbFieldName = OrmliteReflection.getFieldName(field, databaseField)
+		val dbFieldName = getColumnNameForField(field, databaseField)
 
 		if (jsonParentObject.isNull(jsonKey)) {
 			values.putNull(dbFieldName)
-		} else if (OrmliteReflection.isForeign(databaseField)) {
+		} else if (databaseField.isForeign()) {
 			val foreignObject = jsonParentObject.optJSONObject(jsonKey)
-
 			if (foreignObject != null) {
-				//If the JSON includes the forein object, try to persist it
-
+				//If the JSON includes the foreign object, try to persist it
 				val foreignObjectId = persistObjectInternal<Any>(field.type, foreignObject)
-
-				if (!JsonUtils.copyValue(foreignObjectId, dbFieldName, values)) {
-					throw RuntimeException("failed to copy values for key " + jsonKey + " in " + modelClass.name + ": key type " + foreignObjectId.javaClass + " is not supported")
-				}
+				values.putOrThrow(dbFieldName, foreignObjectId)
 			} else {
 				//The JSON does not include the foreign object, see if it is a valid key for the foreign object
-
-				val foreignObjectIdField = OrmliteReflection.findIdField(fieldAnnotationRetriever, field.type)
-						?: throw RuntimeException("failed to find id field for foreign object " + field.type.name + " in " + modelClass.name)
-
-				val foreignObjectId = JsonUtils.getValue(jsonParentObject, jsonKey, foreignObjectIdField.type)
-						?: throw RuntimeException("incompatible id type for foreign object " + field.type.name + " in " + modelClass.name + " (expected " + foreignObjectIdField.type.name + ")")
-
-				if (!JsonUtils.copyValue(foreignObjectId, dbFieldName, values)) {
-					throw RuntimeException("failed to copy values for key " + jsonKey + " in " + modelClass.name + ": key type " + foreignObjectId.javaClass + " is not supported")
-				}
+				val foreignObjectIdField = fieldAnnotationRetriever.findIdFieldOrThrow(field.type)
+				val foreignObjectId = jsonParentObject.getValue(jsonKey, foreignObjectIdField.type)
+				values.putOrThrow(dbFieldName, foreignObjectId)
 			}
 		} else { // non-foreign
 			if (!JsonUtils.copyContentValue(jsonParentObject, jsonKey, values, dbFieldName)) {
-				Log.w(javaClass.name, String.format("attribute type %s has an unsupported type while parsing %s", jsonKey, modelClass.simpleName))
+				Log.w(logTag, "attribute type $jsonKey has an unsupported type while parsing ${modelClass.simpleName}")
 			}
 		}
 	}
 
 	@Throws(JSONException::class)
 	private fun processManyToMany(manyToManyField: ManyToManyField, foreignCollectionMapping: ForeignCollectionMapping, parentId: Any, parentClass: Class<*>) {
-		if (foreignCollectionMapping.jsonArray == null) {
-			// TODO: Delete mapping
-			Log.w(javaClass.name, String.format("Mapping %s for type %s was null. Ignored it, but it should be deleted!", foreignCollectionMapping.field.name, foreignCollectionMapping.field.type.name))
-			return
-		}
-
 		val foreignCollectionField = foreignCollectionMapping.field
-
-		val targetClass = OrmliteReflection.getForeignCollectionParameterType(foreignCollectionField)
-		val targetIdField = OrmliteReflection.findIdField(fieldAnnotationRetriever, targetClass)
-				?: throw RuntimeException("no id field found while processing foreign collection relation for " + targetClass.name)
-
-		val targetForeignField = OrmliteReflection.findForeignField(fieldAnnotationRetriever, targetClass, parentClass)
-				?: throw RuntimeException("no foreign field found while processing foreign collection relation for " + targetClass.name)
-
+		val targetClass = foreignCollectionField.getForeignCollectionParameterType()
+		val targetForeignField = fieldAnnotationRetriever.findForeignField(targetClass, parentClass)
+				?: throw RuntimeException("no foreign field found while processing foreign collection relation for ${targetClass.name}")
 		val targetTargetField = fieldRetriever.getFirstFieldOfType(targetClass, manyToManyField.targetType.javaObjectType)
-				?: throw RuntimeException("ManyToMany problem: no ID field found for type " + manyToManyField.targetType.javaObjectType.name)
-
+				?: throw RuntimeException("ManyToMany problem: no ID field found for type ${manyToManyField.targetType.javaObjectType.name}")
 		val targetTargetIds = persistArrayOfObjects<Any>(targetTargetField.type, foreignCollectionMapping.jsonArray)
-
-		// TODO: cache table name
-		val targetTableName = OrmliteReflection.getTableName(classAnnotationRetriever, targetClass)
-		val targetForeignDbField = fieldAnnotationRetriever.getAnnotation(targetForeignField, DatabaseField::class.java)
+		val targetTableName = classAnnotationRetriever.getTableName(targetClass)
+		val targetForeignDbField = fieldAnnotationRetriever.findAnnotation(targetForeignField, DatabaseField::class.java)
 		val targetForeignDbFieldSafe = checkNotNull(targetForeignDbField)
-		val targetForeignFieldName = OrmliteReflection.getFieldName(targetForeignField, targetForeignDbFieldSafe)
+		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignDbFieldSafe)
 		val targetForeignFieldValue = QueryUtils.parseAttribute(parentId)
-		val deleteSelectClause = "$targetForeignFieldName = $targetForeignFieldValue"
-		database.delete("'$targetTableName'", deleteSelectClause, arrayOf())
 
-		val targetTargetDatabaseField = fieldAnnotationRetriever.getAnnotation(targetTargetField, DatabaseField::class.java)
+		val deleteSelectClause = "$targetForeignFieldName = $targetForeignFieldValue"
+		database.delete("'$targetTableName'", deleteSelectClause, emptyArray())
+
+		val targetTargetDatabaseField = fieldAnnotationRetriever.findAnnotation(targetTargetField, DatabaseField::class.java)
 		val targetTargetDatabaseFieldSafe = checkNotNull(targetTargetDatabaseField)
-		val targetTargetFieldName = OrmliteReflection.getFieldName(targetTargetField, targetTargetDatabaseFieldSafe)
+		val targetTargetFieldName = getColumnNameForField(targetTargetField, targetTargetDatabaseFieldSafe)
 
 		// Insert new references
 		targetTargetIds.indices.forEach { index ->
-			val values = ContentValues(2)
-
-			if (!JsonUtils.copyValue(parentId, targetForeignFieldName, values)) {
-				throw RuntimeException("parent id copy failed")
+			val values = ContentValues(2).apply {
+				putOrThrow(targetForeignFieldName, parentId)
+				putOrThrow(targetTargetFieldName, targetTargetIds[index])
 			}
-
-			if (!JsonUtils.copyValue(targetTargetIds[index], targetTargetFieldName, values)) {
-				throw RuntimeException("target id copy failed")
-			}
-
-			if (database.insert("'$targetTableName'", null, values) == -1L) {
-				throw RuntimeException("failed to insert item in $targetTableName")
-			}
+			database.insertOrThrow("'$targetTableName'", null, values)
 		}
 	}
 
 	@Throws(JSONException::class)
 	private fun processManyToOne(foreignCollectionMapping: ForeignCollectionMapping, parentId: Any, parentClass: Class<*>) {
-		if (foreignCollectionMapping.jsonArray == null) {
-			// TODO: Delete mapping
-			Log.w(javaClass.name, String.format("Mapping %s for type %s was null. Ignored it, but it should be deleted!", foreignCollectionMapping.field.name, foreignCollectionMapping.field.type.name))
-			return
-		}
-
 		val foreignCollectionField = foreignCollectionMapping.field
-
-		val targetClass = OrmliteReflection.getForeignCollectionParameterType(foreignCollectionField)
-		val targetIdField = OrmliteReflection.findIdField(fieldAnnotationRetriever, targetClass)
-				?: throw RuntimeException("no id field found while processing foreign collection relation for " + targetClass.name)
-
-		val targetForeignField = OrmliteReflection.findForeignField(fieldAnnotationRetriever, targetClass, parentClass)
-				?: throw RuntimeException("no foreign field found while processing foreign collection relation for " + targetClass.name)
-
-		val singleTargetField = fieldAnnotationRetriever.getAnnotation(foreignCollectionMapping.field, ForeignCollectionFieldSingleTarget::class.java)
+		val targetClass = foreignCollectionField.getForeignCollectionParameterType()
+		val targetIdField = fieldAnnotationRetriever.findIdField(targetClass)
+				?: throw RuntimeException("no id field found while processing foreign collection relation for ${targetClass.name}")
+		val targetForeignField = fieldAnnotationRetriever.findForeignField(targetClass, parentClass)
+				?: throw RuntimeException("no foreign field found while processing foreign collection relation for ${targetClass.name}")
+		val singleTargetField = fieldAnnotationRetriever.findAnnotation(foreignCollectionMapping.field, ForeignCollectionFieldSingleTarget::class.java)
 
 		val targetIds: List<Any> = if (singleTargetField == null) {
 			persistArrayOfObjects(targetClass, foreignCollectionMapping.jsonArray)
@@ -390,22 +303,20 @@ class JsonPersister
 			persistArrayOfBaseTypes(targetClass, foreignCollectionMapping.jsonArray, singleTargetField)
 		}
 
-		val targetForeignFieldDbAnnotation = fieldAnnotationRetriever.getAnnotation(targetForeignField, DatabaseField::class.java)
+		val targetForeignFieldDbAnnotation = fieldAnnotationRetriever.findAnnotation(targetForeignField, DatabaseField::class.java)
 		val targetForeignFieldDbAnnotationSafe = checkNotNull(targetForeignFieldDbAnnotation) { "DatabaseField annotation not found" }
-		val targetForeignFieldName = OrmliteReflection.getFieldName(targetForeignField, targetForeignFieldDbAnnotationSafe)
+		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignFieldDbAnnotationSafe)
 
-		val values = ContentValues(1)
-
-		if (!JsonUtils.copyValue(parentId, targetForeignFieldName, values)) {
-			throw RuntimeException("failed to copy foreign key " + targetForeignFieldName + " in " + parentClass.name + ": key type " + parentId.javaClass + " is not supported")
+		val values = ContentValues(1).apply {
+			putOrThrow(targetForeignFieldName, parentId)
 		}
 
 		val targetIdArgs = arrayOfNulls<String>(targetIds.size)
 		val inClause = QueryUtils.createInClause(targetIds, targetIdArgs)
 
 		// update references to all target objects
-		val targetTableName = OrmliteReflection.getTableName(classAnnotationRetriever, targetClass)
-		val targetIdFieldName = OrmliteReflection.getFieldName(fieldAnnotationRetriever, targetIdField)
+		val targetTableName = classAnnotationRetriever.getTableName(targetClass)
+		val targetIdFieldName = fieldAnnotationRetriever.getColumnNameForField(targetIdField)
 
 		val updateSelectClause = "$targetIdFieldName $inClause"
 		database.update("'$targetTableName'", values, updateSelectClause, targetIdArgs)
@@ -418,18 +329,16 @@ class JsonPersister
 		}
 	}
 
-	/**
-	 * All necessary data to map an array of objects onto the provided parent field.
-	 */
-	private class ForeignCollectionMapping
-	/**
-	 * @param field
-	 * @param jsonArray or null
-	 */
-	internal constructor(
-		internal val field: Field,
-		internal val jsonArray: JSONArray?
-	)
+	private fun insertRowFromModelClass(tableName: String, modelClass: Class<*>): IdDescriptor {
+		val idField = fieldAnnotationRetriever.findIdField(modelClass)
+				?: throw SQLiteException("class ${modelClass.name} doesn't have a DatabaseField that is marked as being an ID")
+		val idDatabaseField = fieldAnnotationRetriever.findAnnotation(idField, DatabaseField::class.java)
+		// we don't have to check for id_database_field being null because OrmliteReflection.findIdField implied it is there
+		val idDatabaseFieldSafe = checkNotNull(idDatabaseField) { "unexpected null in id_database_field" }
+		val idColumnName = getColumnNameForField(idField, idDatabaseFieldSafe)
+		val insertedId = database.insertOrThrow("'$tableName'", idColumnName, ContentValues())
+		return IdDescriptor(idColumnName, insertedId)
+	}
 
 	companion object {
 		/**

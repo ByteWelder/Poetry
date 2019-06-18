@@ -17,9 +17,9 @@ internal class ClassAnnotationRetriever {
 	 * @param <AnnotationType> the annotation type to search for
 	 * @return the Annotation or null
 	</AnnotationType> */
-	fun <AnnotationType : Annotation> getAnnotation(parentClass: Class<*>, annotationClass: Class<AnnotationType>): AnnotationType? {
+	fun <AnnotationType : Annotation> findAnnotation(parentClass: Class<*>, annotationClass: Class<AnnotationType>): AnnotationType? {
 		// Try to retrieve it from cache
-		var annotation = getCachedAnnotation(parentClass, annotationClass)
+		var annotation = findCachedAnnotation(parentClass, annotationClass)
 
 		// If not cached, try reflection
 		if (annotation == null) {
@@ -32,7 +32,7 @@ internal class ClassAnnotationRetriever {
 		return annotation as AnnotationType?
 	}
 
-	private fun getCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out Annotation>): Annotation? {
+	private fun findCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out Annotation>): Annotation? {
 		val annotationMap = classAnnotationCache[parentClass]
 
 		return if (annotationMap != null) annotationMap[annotationClass] else null

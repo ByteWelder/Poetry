@@ -15,8 +15,8 @@ class DatabaseHelperRule<T : OrmLiteSqliteOpenHelper>(
 	override fun apply(base: Statement, description: Description) = object : Statement() {
 		override fun evaluate() {
 			val context = InstrumentationRegistry.getInstrumentation().context
-			// We must reset the helper class manually, otherwise we get an error
-			// when we release the helper and get a different one.
+			// We must release the helper class manually, otherwise we get an error
+			// when we call releaseHelper() and get a new one.
 			OpenHelperManager.setOpenHelperClass(null)
 			helper = OpenHelperManager.getHelper(context, databaseHelperClass)
 			try {
@@ -25,6 +25,7 @@ class DatabaseHelperRule<T : OrmLiteSqliteOpenHelper>(
 				// No-op
 			} finally {
 				OpenHelperManager.releaseHelper()
+				OpenHelperManager.setOpenHelperClass(null)
 			}
 		}
 	}

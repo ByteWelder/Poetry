@@ -17,9 +17,9 @@ internal class FieldAnnotationRetriever {
 	 * @param <AnnotationType> the annotation type to search for
 	 * @return the found Annotation or null
 	 */
-	fun <AnnotationType : Annotation> getAnnotation(field: Field, annotationClass: Class<AnnotationType>): AnnotationType? {
+	fun <AnnotationType : Annotation> findAnnotation(field: Field, annotationClass: Class<AnnotationType>): AnnotationType? {
 		// Try to retrieve it from cache
-		var annotation = getCachedAnnotation(field, annotationClass)
+		var annotation = findCachedAnnotation(field, annotationClass)
 
 		// If not cached, try reflection
 		if (annotation == null) {
@@ -32,7 +32,7 @@ internal class FieldAnnotationRetriever {
 		return annotation as AnnotationType?
 	}
 
-	private fun getCachedAnnotation(field: Field, annotationClass: Class<out Annotation>): Annotation? {
+	private fun findCachedAnnotation(field: Field, annotationClass: Class<out Annotation>): Annotation? {
 		val annotationMap = fieldAnnotationCache[field]
 		return if (annotationMap != null) annotationMap[annotationClass] else null
 	}
