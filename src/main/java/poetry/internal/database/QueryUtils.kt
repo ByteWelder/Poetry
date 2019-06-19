@@ -1,7 +1,7 @@
 package poetry.internal.database
 
 import java.security.InvalidParameterException
-import java.util.*
+import java.util.Date
 
 internal object QueryUtils {
 	/**
@@ -57,7 +57,7 @@ internal object QueryUtils {
 			throw RuntimeException("targetIds and targetIdArgs must be the same size")
 		}
 
-		val inClauseBuilder = StringBuilder(5 + targetIds.size)
+		val inClauseBuilder = StringBuilder(5 + (targetIds.size * 2))
 
 		inClauseBuilder.append("IN (")
 
@@ -66,7 +66,7 @@ internal object QueryUtils {
 
 			inClauseBuilder.append('?')
 
-			if (index != targetIds.size - 1) {
+			if (index != targetIds.lastIndex) {
 				inClauseBuilder.append(',')
 			}
 		}

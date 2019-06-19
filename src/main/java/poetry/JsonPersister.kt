@@ -2,7 +2,6 @@ package poetry
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteException
 import android.os.Looper
 import android.util.Log
 import com.j256.ormlite.field.DatabaseField
@@ -13,22 +12,22 @@ import org.json.JSONException
 import org.json.JSONObject
 import poetry.annotations.ForeignCollectionFieldSingleTarget
 import poetry.annotations.ManyToManyField
-import poetry.internal.JsonUtils
+import poetry.internal.database.Database
+import poetry.internal.database.NO_ID
 import poetry.internal.database.QueryUtils
-import poetry.internal.database.createRowIfNotExists
-import poetry.internal.database.enableWriteAheadLoggingSafely
+import poetry.internal.database.native.NativeDatabase
 import poetry.internal.database.putOrThrow
-import poetry.internal.database.transactionNonExclusive
+import poetry.internal.database.transaction
 import poetry.internal.getValue
 import poetry.internal.reflection.ClassAnnotationRetriever
 import poetry.internal.reflection.FieldAnnotationRetriever
 import poetry.internal.reflection.FieldRetriever
-import poetry.internal.reflection.findForeignField
-import poetry.internal.reflection.findIdField
+import poetry.internal.reflection.findForeignFieldOrThrow
 import poetry.internal.reflection.findIdFieldOrThrow
 import poetry.internal.reflection.getColumnNameForField
 import poetry.internal.reflection.getForeignCollectionParameterType
 import poetry.internal.reflection.getTableName
+import poetry.internal.reflection.getTableNameOrThrow
 import poetry.internal.reflection.isForeign
 import poetry.internal.reflection.isId
 import poetry.internal.toIterable
@@ -37,9 +36,9 @@ import java.lang.reflect.Field
 
 private const val logTag = "JsonPersister"
 
-private class IdDescriptor(val columnName: String, val id: Any) {
+private class IdDescriptor(val columnName: String, val id: Long) {
 	companion object {
-		val None: IdDescriptor = IdDescriptor("", 0)
+		val None: IdDescriptor = IdDescriptor("", NO_ID)
 	}
 }
 
@@ -57,10 +56,12 @@ class JsonPersister
  * @param database the database used for persistence
  * @param options 0 or a combination of 1 or more options as defined by [JsonPersister].OPTION_*
  */
-@JvmOverloads constructor(private val database: SQLiteDatabase, private val options: Int = 0) {
+@JvmOverloads constructor(private val database: Database, private val options: Int = DEFAULT_OPTIONS) {
 	private val fieldRetriever = FieldRetriever()
 	private val fieldAnnotationRetriever = FieldAnnotationRetriever()
 	private val classAnnotationRetriever = ClassAnnotationRetriever()
+
+	@JvmOverloads constructor(database: SQLiteDatabase, options: Int = DEFAULT_OPTIONS): this(NativeDatabase(database), options)
 
 	/**
 	 * Recursively persist this object and all its children.
@@ -72,12 +73,9 @@ class JsonPersister
 	 * @throws JSONException when something went wrong through parsing, this also fails the database transaction and results in no data changes
 	</IdType> */
 	@Throws(JSONException::class)
-	fun <IdType> persistObject(modelClass: Class<*>, jsonObject: JSONObject): IdType {
+	fun persistObject(modelClass: Class<*>, jsonObject: JSONObject): Long {
 		warnIfOnMainThread("persistObject()")
-
-		database.enableWriteAheadLoggingSafely()
-
-		return database.transactionNonExclusive {
+		return database.transaction {
 			persistObjectInternal(modelClass, jsonObject)
 		}
 	}
@@ -92,12 +90,9 @@ class JsonPersister
 	 * @throws JSONException when something went wrong through parsing, this also fails the database transaction and results in no data changes
 	 */
 	@Throws(JSONException::class)
-	fun <IdType> persistArray(modelClass: Class<*>, jsonArray: JSONArray): List<IdType> {
+	fun persistArray(modelClass: Class<*>, jsonArray: JSONArray): List<Long> {
 		warnIfOnMainThread("persistArray()")
-
-		database.enableWriteAheadLoggingSafely()
-
-		return database.transactionNonExclusive {
+		return database.transaction {
 			persistArrayOfObjects(modelClass, jsonArray)
 		}
 	}
@@ -112,10 +107,10 @@ class JsonPersister
 	 * @throws JSONException when json processing fails
 	</IdType> */
 	@Throws(JSONException::class)
-	private fun <IdType> persistObjectInternal(modelClass: Class<*>, jsonObject: JSONObject): IdType {
-		val tableAnnotation = modelClass.getAnnotation(DatabaseTable::class.java)
-				?: throw RuntimeException("DatabaseTable annotation not found for ${modelClass.name}")
-
+	private fun persistObjectInternal(modelClass: Class<*>, jsonObject: JSONObject): Long {
+		val tableAnnotation = checkNotNull(modelClass.getAnnotation(DatabaseTable::class.java)) {
+			"DatabaseTable annotation not found for ${modelClass.name}"
+		}
 		val values = ContentValues()
 		val foreignCollectionMappings = ArrayList<ForeignCollectionMapping>()
 		val tableName = getTableName(modelClass, tableAnnotation)
@@ -141,7 +136,7 @@ class JsonPersister
 						}
 						idDescriptor = createRowIfNotExists(jsonObject, jsonKey, field, databaseField, tableName)
 					} else { // object exists, so process its value or reference
-						processDatabaseField(databaseField, field, jsonObject, jsonKey, modelClass, values)
+						processDatabaseField(field, databaseField, jsonObject, jsonKey, values)
 					}
 				} else { // check if we have a ForeignCollectionField (which is used for one-to-many relationships)
 					val foreignCollectionField = fieldAnnotationRetriever.findAnnotation(field, ForeignCollectionField::class.java)
@@ -170,7 +165,7 @@ class JsonPersister
 		// Update id field
 		// TODO: Is this really necessary? We should already have this in the database by now?!
 		if (values.size() > 0) {
-			database.update("'$tableName'", values, "${idDescriptor.columnName} = ?", arrayOf(idDescriptor.id.toString()))
+			database.update(tableName, values, "${idDescriptor.columnName} = ?", arrayOf(idDescriptor.id.toString()))
 		}
 
 		Log.i(logTag, "imported ${modelClass.simpleName} (${idDescriptor.columnName}=${idDescriptor.id})")
@@ -185,13 +180,13 @@ class JsonPersister
 			}
 		}
 
-		return idDescriptor.id as IdType
+		return idDescriptor.id
 	}
 
 	@Throws(JSONException::class)
-	private fun <IdType> persistArrayOfObjects(modelClass: Class<*>, jsonArray: JSONArray): List<IdType> {
+	private fun persistArrayOfObjects(modelClass: Class<*>, jsonArray: JSONArray): List<Long> {
 		return jsonArray.toIterableJsonObject()
-				.map { persistObjectInternal<IdType>(modelClass, it) }
+				.map { persistObjectInternal(modelClass, it) }
 				.toList()
 	}
 
@@ -201,10 +196,8 @@ class JsonPersister
 	 */
 	@Throws(JSONException::class)
 	private fun persistArrayOfBaseTypes(modelClass: Class<*>, jsonArray: JSONArray, singleTargetField: ForeignCollectionFieldSingleTarget): List<Any> {
-		val tableAnnotation = modelClass.getAnnotation(DatabaseTable::class.java)
-				?: throw RuntimeException("DatabaseTable annotation not found for ${modelClass.name}")
+		val tableAnnotation = classAnnotationRetriever.findAnnotationOrThrow(modelClass, DatabaseTable::class.java)
 		val tableName = getTableName(modelClass, tableAnnotation)
-
 		return jsonArray.toIterable()
 				.map { it.toString() }
 				.map { valueString ->
@@ -213,7 +206,7 @@ class JsonPersister
 					}
 				}
 				.map { contentValues ->
-					database.insertOrThrow("'$tableName'", singleTargetField.targetField, contentValues)
+					database.insertOrThrow(tableName, contentValues, singleTargetField.targetField)
 				}
 				.toList()
 	}
@@ -223,15 +216,28 @@ class JsonPersister
 	 */
 	@Throws(JSONException::class)
 	private fun createRowIfNotExists(jsonObject: JSONObject, jsonKey: String, field: Field, databaseField: DatabaseField, tableName: String): IdDescriptor {
-		val id = jsonObject.getValue(jsonKey, field.type)
+		val jsonId = jsonObject.getValue(jsonKey, field.type)
 		val idColumnName = getColumnNameForField(field, databaseField)
 		// TODO: make test with String id
-		database.createRowIfNotExists(tableName, idColumnName, id)
-		return IdDescriptor(idColumnName, id)
+		val queryId = database.queryFirst(tableName, idColumnName, jsonId.toString())
+		val validId = if (queryId != NO_ID) {
+			queryId
+		} else {
+			database.insertOrThrow(tableName, ContentValues(), idColumnName)
+		}
+
+		return IdDescriptor(idColumnName, validId)
 	}
 
+	/**
+	 * @param field the field to process
+	 * @param databaseField the annotation for the provided field
+	 * @param jsonParentObject the JSON parent the analyze
+	 * @param jsonKey the corresponding json key (must exist in JSONObject!)
+	 * @param values the database column values to output
+	 */
 	@Throws(JSONException::class)
-	private fun processDatabaseField(databaseField: DatabaseField, field: Field, jsonParentObject: JSONObject, jsonKey: String, modelClass: Class<*>, values: ContentValues) {
+	private fun processDatabaseField(field: Field, databaseField: DatabaseField, jsonParentObject: JSONObject, jsonKey: String, values: ContentValues) {
 		val dbFieldName = getColumnNameForField(field, databaseField)
 
 		if (jsonParentObject.isNull(jsonKey)) {
@@ -240,7 +246,7 @@ class JsonPersister
 			val foreignObject = jsonParentObject.optJSONObject(jsonKey)
 			if (foreignObject != null) {
 				//If the JSON includes the foreign object, try to persist it
-				val foreignObjectId = persistObjectInternal<Any>(field.type, foreignObject)
+				val foreignObjectId = persistObjectInternal(field.type, foreignObject)
 				values.putOrThrow(dbFieldName, foreignObjectId)
 			} else {
 				//The JSON does not include the foreign object, see if it is a valid key for the foreign object
@@ -248,10 +254,9 @@ class JsonPersister
 				val foreignObjectId = jsonParentObject.getValue(jsonKey, foreignObjectIdField.type)
 				values.putOrThrow(dbFieldName, foreignObjectId)
 			}
-		} else { // non-foreign
-			if (!JsonUtils.copyContentValue(jsonParentObject, jsonKey, values, dbFieldName)) {
-				Log.w(logTag, "attribute type $jsonKey has an unsupported type while parsing ${modelClass.simpleName}")
-			}
+		} else { // non-null, non-foreign, so assume regular value
+			val jsonValue = jsonParentObject.get(jsonKey)
+			values.putOrThrow(dbFieldName, jsonValue)
 		}
 	}
 
@@ -259,19 +264,17 @@ class JsonPersister
 	private fun processManyToMany(manyToManyField: ManyToManyField, foreignCollectionMapping: ForeignCollectionMapping, parentId: Any, parentClass: Class<*>) {
 		val foreignCollectionField = foreignCollectionMapping.field
 		val targetClass = foreignCollectionField.getForeignCollectionParameterType()
-		val targetForeignField = fieldAnnotationRetriever.findForeignField(targetClass, parentClass)
-				?: throw RuntimeException("no foreign field found while processing foreign collection relation for ${targetClass.name}")
-		val targetTargetField = fieldRetriever.getFirstFieldOfType(targetClass, manyToManyField.targetType.javaObjectType)
-				?: throw RuntimeException("ManyToMany problem: no ID field found for type ${manyToManyField.targetType.javaObjectType.name}")
-		val targetTargetIds = persistArrayOfObjects<Any>(targetTargetField.type, foreignCollectionMapping.jsonArray)
-		val targetTableName = classAnnotationRetriever.getTableName(targetClass)
+		val targetForeignField = fieldAnnotationRetriever.findForeignFieldOrThrow(targetClass, parentClass)
+		val targetTargetField = fieldRetriever.findFirstFieldOfTypeOrThrow(targetClass, manyToManyField.targetType.javaObjectType)
+		val targetTargetIds = persistArrayOfObjects(targetTargetField.type, foreignCollectionMapping.jsonArray)
+		val targetTableName = classAnnotationRetriever.getTableNameOrThrow(targetClass)
 		val targetForeignDbField = fieldAnnotationRetriever.findAnnotation(targetForeignField, DatabaseField::class.java)
 		val targetForeignDbFieldSafe = checkNotNull(targetForeignDbField)
 		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignDbFieldSafe)
 		val targetForeignFieldValue = QueryUtils.parseAttribute(parentId)
 
 		val deleteSelectClause = "$targetForeignFieldName = $targetForeignFieldValue"
-		database.delete("'$targetTableName'", deleteSelectClause, emptyArray())
+		database.delete(targetTableName, deleteSelectClause, emptyArray())
 
 		val targetTargetDatabaseField = fieldAnnotationRetriever.findAnnotation(targetTargetField, DatabaseField::class.java)
 		val targetTargetDatabaseFieldSafe = checkNotNull(targetTargetDatabaseField)
@@ -283,7 +286,7 @@ class JsonPersister
 				putOrThrow(targetForeignFieldName, parentId)
 				putOrThrow(targetTargetFieldName, targetTargetIds[index])
 			}
-			database.insertOrThrow("'$targetTableName'", null, values)
+			database.insertOrThrow(targetTableName, values)
 		}
 	}
 
@@ -291,10 +294,8 @@ class JsonPersister
 	private fun processManyToOne(foreignCollectionMapping: ForeignCollectionMapping, parentId: Any, parentClass: Class<*>) {
 		val foreignCollectionField = foreignCollectionMapping.field
 		val targetClass = foreignCollectionField.getForeignCollectionParameterType()
-		val targetIdField = fieldAnnotationRetriever.findIdField(targetClass)
-				?: throw RuntimeException("no id field found while processing foreign collection relation for ${targetClass.name}")
-		val targetForeignField = fieldAnnotationRetriever.findForeignField(targetClass, parentClass)
-				?: throw RuntimeException("no foreign field found while processing foreign collection relation for ${targetClass.name}")
+		val targetIdField = fieldAnnotationRetriever.findIdFieldOrThrow(targetClass)
+		val targetForeignField = fieldAnnotationRetriever.findForeignFieldOrThrow(targetClass, parentClass)
 		val singleTargetField = fieldAnnotationRetriever.findAnnotation(foreignCollectionMapping.field, ForeignCollectionFieldSingleTarget::class.java)
 
 		val targetIds: List<Any> = if (singleTargetField == null) {
@@ -303,9 +304,8 @@ class JsonPersister
 			persistArrayOfBaseTypes(targetClass, foreignCollectionMapping.jsonArray, singleTargetField)
 		}
 
-		val targetForeignFieldDbAnnotation = fieldAnnotationRetriever.findAnnotation(targetForeignField, DatabaseField::class.java)
-		val targetForeignFieldDbAnnotationSafe = checkNotNull(targetForeignFieldDbAnnotation) { "DatabaseField annotation not found" }
-		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignFieldDbAnnotationSafe)
+		val targetForeignFieldDbAnnotation = fieldAnnotationRetriever.findAnnotationOrThrow(targetForeignField, DatabaseField::class.java)
+		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignFieldDbAnnotation)
 
 		val values = ContentValues(1).apply {
 			putOrThrow(targetForeignFieldName, parentId)
@@ -315,28 +315,25 @@ class JsonPersister
 		val inClause = QueryUtils.createInClause(targetIds, targetIdArgs)
 
 		// update references to all target objects
-		val targetTableName = classAnnotationRetriever.getTableName(targetClass)
+		val targetTableName = classAnnotationRetriever.getTableNameOrThrow(targetClass)
 		val targetIdFieldName = fieldAnnotationRetriever.getColumnNameForField(targetIdField)
 
 		val updateSelectClause = "$targetIdFieldName $inClause"
-		database.update("'$targetTableName'", values, updateSelectClause, targetIdArgs)
+		database.update(targetTableName, values, updateSelectClause, targetIdArgs)
 
 		if (!isOptionEnabled(options, OPTION_DISABLE_FOREIGN_COLLECTION_CLEANUP)) {
 			// remove all objects that are not referenced to the parent anymore
 			val idToCleanUp = QueryUtils.parseAttribute(parentId)
 			val deleteSelectClause = "$targetIdFieldName NOT $inClause AND $targetForeignFieldName = $idToCleanUp"
-			database.delete("'$targetTableName'", deleteSelectClause, targetIdArgs)
+			database.delete(targetTableName, deleteSelectClause, targetIdArgs)
 		}
 	}
 
 	private fun insertRowFromModelClass(tableName: String, modelClass: Class<*>): IdDescriptor {
-		val idField = fieldAnnotationRetriever.findIdField(modelClass)
-				?: throw SQLiteException("class ${modelClass.name} doesn't have a DatabaseField that is marked as being an ID")
-		val idDatabaseField = fieldAnnotationRetriever.findAnnotation(idField, DatabaseField::class.java)
-		// we don't have to check for id_database_field being null because OrmliteReflection.findIdField implied it is there
-		val idDatabaseFieldSafe = checkNotNull(idDatabaseField) { "unexpected null in id_database_field" }
-		val idColumnName = getColumnNameForField(idField, idDatabaseFieldSafe)
-		val insertedId = database.insertOrThrow("'$tableName'", idColumnName, ContentValues())
+		val idField = fieldAnnotationRetriever.findIdFieldOrThrow(modelClass)
+		val idDatabaseField = fieldAnnotationRetriever.findAnnotationOrThrow(idField, DatabaseField::class.java)
+		val idColumnName = getColumnNameForField(idField, idDatabaseField)
+		val insertedId = database.insertOrThrow(tableName, ContentValues(), idColumnName)
 		return IdDescriptor(idColumnName, insertedId)
 	}
 
@@ -352,6 +349,8 @@ class JsonPersister
 		 */
 		const val OPTION_DISABLE_IGNORED_ATTRIBUTES_WARNING = 0x0002
 
+		const val DEFAULT_OPTIONS = 0
+
 		/**
 		 * Check if an option is enabled
 		 *
@@ -365,6 +364,6 @@ class JsonPersister
 
 private fun warnIfOnMainThread(methodName: String) {
 	if (Looper.myLooper() == Looper.getMainLooper()) {
-		Log.w(JsonPersister::class.java.name, "Don't call $methodName from the main thread")
+		Log.w(logTag, "Don't call $methodName from the main thread")
 	}
 }

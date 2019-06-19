@@ -2,12 +2,14 @@ package poetry.internal.reflection
 
 import java.lang.reflect.Field
 
+internal typealias ClassToAnnotationMap = HashMap<Class<*>, AnnotationMap>
 /**
  * AnnotationRetriever caches annotations to improve performance.
  * Fetching annotations is a CPU-heavy operation, so this classes caches the results.
  */
-internal class ClassAnnotationRetriever {
-	private val classAnnotationCache = HashMap<Class<*>, HashMap<Class<out Annotation>, Annotation?>>()
+internal class ClassAnnotationRetriever(
+	private val classAnnotationCache: ClassToAnnotationMap = ClassToAnnotationMap()
+) {
 
 	/**
 	 * Retrieve a [Field] for a class.
@@ -24,18 +26,27 @@ internal class ClassAnnotationRetriever {
 		// If not cached, try reflection
 		if (annotation == null) {
 			annotation = parentClass.getAnnotation(annotationClass)
-
 			// Null values are also cached because it will make the next failure quicker
 			setCachedAnnotation(parentClass, annotationClass, annotation)
 		}
 
-		return annotation as AnnotationType?
+		return annotation
 	}
 
-	private fun findCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out Annotation>): Annotation? {
-		val annotationMap = classAnnotationCache[parentClass]
+	fun <AnnotationType : Annotation> findAnnotationOrThrow(parentClass: Class<*>, annotationClass: Class<AnnotationType>): AnnotationType {
+		return checkNotNull(findAnnotation(parentClass, annotationClass)) {
+			"${annotationClass.name} annotation not found for ${parentClass.name}"
+		}
+	}
 
-		return if (annotationMap != null) annotationMap[annotationClass] else null
+	private fun <AnnotationType : Annotation> findCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out AnnotationType>): AnnotationType? {
+		val annotationMap = classAnnotationCache[parentClass]
+		return if (annotationMap != null) {
+			@Suppress("UNCHECKED_CAST")
+			annotationMap[annotationClass] as AnnotationType
+		} else {
+			null
+		}
 	}
 
 	private fun setCachedAnnotation(parentClass: Class<*>, annotationClass: Class<out Annotation>, annotation: Annotation?) {

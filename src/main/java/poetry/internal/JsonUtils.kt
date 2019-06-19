@@ -1,27 +1,25 @@
 package poetry.internal
 
-import android.content.ContentValues
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import poetry.internal.database.put
 
 class JsonArrayAnyIterator(private val array: JSONArray) : Iterator<Any> {
 	private var currentIndex = 0
 	private val lastIndex = array.length() - 1
 
-	override fun hasNext() = currentIndex < array.length()
+	override fun hasNext() = currentIndex < lastIndex
 
-	override fun next() = array[++currentIndex]
+	override fun next() = array[++currentIndex]!!
 }
 
 class JsonArrayJsonObjectIterator(private val array: JSONArray) : Iterator<JSONObject> {
 	private var currentIndex = 0
 	private val lastIndex = array.length() - 1
 
-	override fun hasNext() = currentIndex < array.length()
+	override fun hasNext() = currentIndex < lastIndex
 
-	override fun next() = array.getJSONObject(++currentIndex)
+	override fun next() = array.getJSONObject(++currentIndex)!!
 }
 
 fun JSONArray.toIterable(): Iterable<Any> {
@@ -62,19 +60,5 @@ fun JSONObject.getValue(jsonKey: String, type: Class<*>): Any {
 		getDouble(jsonKey).toFloat()
 	} else {
 		throw RuntimeException("Unsupported type ${type.name} (only Integer, Long, Boolean, String, Double and Float are supported)")
-	}
-}
-
-internal object JsonUtils {
-
-	@Throws(JSONException::class)
-	fun copyContentValue(jsonObject: JSONObject, jsonKey: String, contentValues: ContentValues, key: String): Boolean {
-		return if (!jsonObject.has(jsonKey)) {
-			false
-		} else {
-			val jsonValue = jsonObject.get(jsonKey)
-			// TODO: should we call putOrThrow() instead?
-			contentValues.put(key, jsonValue)
-		}
 	}
 }

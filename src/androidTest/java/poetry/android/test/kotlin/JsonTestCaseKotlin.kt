@@ -29,8 +29,8 @@ class JsonTestCaseKotlin {
 
 		// Persist arrays to database
 		val persister = JsonPersister(helperRule.helper.writableDatabase)
-		persister.persistArray<Any>(User::class.java, usersJson)
-		persister.persistArray<Any>(Group::class.java, groupsJson)
+		persister.persistArray(User::class.java, usersJson)
+		persister.persistArray(Group::class.java, groupsJson)
 
 		val userDao = helperRule.helper.getDao<Dao<User, Int>, User>(User::class.java)
 		val groupDao = helperRule.helper.getDao<Dao<Group, Int>, Group>(Group::class.java)

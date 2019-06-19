@@ -2,12 +2,15 @@ package poetry.internal.reflection
 
 import java.lang.reflect.Field
 
+internal typealias FieldToAnnotationMap = HashMap<Field, AnnotationMap>
+
 /**
  * AnnotationRetriever caches annotations to improve performance.
  * Fetching annotations is a CPU-heavy operation, so this classes caches the results.
  */
-internal class FieldAnnotationRetriever {
-	private val fieldAnnotationCache = HashMap<Field, HashMap<Class<out Annotation>, Annotation?>>()
+internal class FieldAnnotationRetriever(
+	private val fieldAnnotationCache: FieldToAnnotationMap = FieldToAnnotationMap()
+) {
 
 	/**
 	 * Retrieve a [Field] for a Field.
@@ -24,17 +27,27 @@ internal class FieldAnnotationRetriever {
 		// If not cached, try reflection
 		if (annotation == null) {
 			annotation = field.getAnnotation(annotationClass)
-
 			// Null values are also cached because it will make the next failure quicker
 			setCachedAnnotation(field, annotationClass, annotation)
 		}
 
-		return annotation as AnnotationType?
+		return annotation
 	}
 
-	private fun findCachedAnnotation(field: Field, annotationClass: Class<out Annotation>): Annotation? {
+	fun <AnnotationType : Annotation> findAnnotationOrThrow(field: Field, annotationClass: Class<AnnotationType>): AnnotationType {
+		return checkNotNull(findAnnotation(field, annotationClass)) {
+			"${annotationClass.name} annotation not found on field ${field.name}"
+		}
+	}
+
+	private fun <AnnotationType : Annotation> findCachedAnnotation(field: Field, annotationClass: Class<out AnnotationType>): AnnotationType? {
 		val annotationMap = fieldAnnotationCache[field]
-		return if (annotationMap != null) annotationMap[annotationClass] else null
+		return if (annotationMap != null) {
+			@Suppress("UNCHECKED_CAST")
+			annotationMap[annotationClass] as AnnotationType
+		} else {
+			null
+		}
 	}
 
 	private fun setCachedAnnotation(field: Field, annotationClass: Class<out Annotation>, annotation: Annotation?) {

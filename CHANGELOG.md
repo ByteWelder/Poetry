@@ -12,6 +12,7 @@
 - Moved classes in more logical packages
 - Removed `JsonPathResolver` and related classes
 - AndroidX for tests (this dependency is not used in production code)
+- Return SQLite row id when persisting objects. `WITHOUT ROWID` is now unsupported.
 
 ## 4.0.0
 

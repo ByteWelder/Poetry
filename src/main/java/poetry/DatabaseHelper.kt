@@ -88,11 +88,13 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 
 	@Throws(java.sql.SQLException::class)
 	override fun <D : Dao<T, *>, T> getDao(clazz: Class<T>): D {
-		val cachedDao = cachedDaos[clazz]
+		@Suppress("UNCHECKED_CAST")
+		val cachedDao = cachedDaos[clazz] as D?
 		return if (cachedDao != null) {
-			 cachedDao as? D? ?: throw IllegalStateException("")
+			 cachedDao
 		} else {
 			// fetch new Dao
+			@Suppress("UNCHECKED_CAST")
 			val superDao = super.getDao(clazz) as D
 			cachedDaos[clazz] = superDao
 			superDao

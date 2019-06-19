@@ -80,12 +80,7 @@ internal fun FieldAnnotationRetriever.findIdField(modelClass: Class<*>): Field? 
 }
 
 internal fun FieldAnnotationRetriever.findIdFieldOrThrow(modelClass: Class<*>): Field {
-	val field = findIdField(modelClass)
-	if (field == null) {
-		throw RuntimeException("Failed to find id field in ${modelClass.name}")
-	} else {
-		return field
-	}
+	return checkNotNull(findIdField(modelClass)) { "Failed to find id field in ${modelClass.name}" }
 }
 
 /**
@@ -119,11 +114,19 @@ internal fun FieldAnnotationRetriever.findForeignField(parentClass: Class<*>, fi
 			}
 }
 
-private fun FieldAnnotationRetriever.findForeignFieldWithoutInheritance(parentClass: Class<*>, findClass: Class<*>): Field? {
-	return parentClass.declaredFields.firstOrNull { field ->
-		val databaseField = findAnnotation(field, DatabaseField::class.java)
-		databaseField != null &&
-				databaseField.isForeign() &&
-				findClass.isAssignableFrom(field.type)
+internal fun FieldAnnotationRetriever.findForeignFieldOrThrow(parentClass: Class<*>, findClass: Class<*>): Field {
+	return checkNotNull(findForeignField(parentClass, findClass)) {
+		"No foreign field found in ${parentClass.name} of type ${findClass.name}"
 	}
+}
+
+private fun FieldAnnotationRetriever.findForeignFieldWithoutInheritance(parentClass: Class<*>, findClass: Class<*>): Field? {
+	return parentClass.declaredFields.firstOrNull { isForeignFieldOfType(it, findClass) }
+}
+
+private fun FieldAnnotationRetriever.isForeignFieldOfType(field: Field, findClass: Class<*>): Boolean {
+	val databaseField = findAnnotation(field, DatabaseField::class.java)
+	return databaseField != null &&
+			databaseField.isForeign() &&
+			findClass.isAssignableFrom(field.type)
 }

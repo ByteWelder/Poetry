@@ -8,10 +8,9 @@ import com.j256.ormlite.table.DatabaseTable
  * @param modelClass an OrmLite model class annotated with [DatabaseTable]
  * @return the SQLite table name
  */
-internal fun ClassAnnotationRetriever.getTableName(modelClass: Class<*>): String {
+internal fun ClassAnnotationRetriever.getTableNameOrThrow(modelClass: Class<*>): String {
 	val tableAnnotation = findAnnotation(modelClass, DatabaseTable::class.java)
 			?: throw RuntimeException("DatabaseTable annotation not found for ${modelClass.name}")
-
 	return getTableName(modelClass, tableAnnotation)
 }
 

@@ -63,30 +63,43 @@ internal class FieldRetriever {
 	 * Find a field in a model, providing its JSON attribute name
 	 *
 	 * @param modelClass the model class
-	 * @param name       the name of the JSON field
+	 * @param name the name of the JSON field
 	 * @return the Field that is found or null
 	 */
 	private fun findField(modelClass: Class<*>, name: String): Field? {
 		// Check all the fields in the model
 		for (field in modelClass.declaredFields) {
-			// Direct match?
+			// Direct match
 			if (field.name == name) {
 				return field
 			}
 
-			// MapFrom-annotated match?
-			val map_from = field.getAnnotation(MapFrom::class.java)
-
-			if (map_from != null && name == map_from.value) {
+			// MapFrom-annotated match
+			val mapFrom = field.getAnnotation(MapFrom::class.java)
+			if (mapFrom != null && name == mapFrom.value) {
 				return field
 			}
 		}
 
-		return if (modelClass.superclass == null) {
+		// Recursively check superclass if possible
+		val superClass = modelClass.superclass
+		return if (superClass != null) {
+			findField(superClass, name)
+		} else {
 			null
-		} else findField(modelClass.superclass!!, name)
+		}
+	}
 
-		// Recursively check superclass
+	/**
+	 * Finds a field of a certain type in a given parent type
+	 *
+	 * @param parentClass the parent class that holds the field
+	 * @param fieldClass  the field class to search for
+	 */
+	fun findFirstFieldOfTypeOrThrow(parentClass: Class<*>, fieldClass: Class<*>): Field {
+		return checkNotNull(findFirstFieldOfType(parentClass, fieldClass)) {
+			"No field found of type ${fieldClass.name} in ${parentClass.name}"
+		}
 	}
 
 	/**
@@ -94,16 +107,14 @@ internal class FieldRetriever {
 	 *
 	 * @param parentClass the class to search for the Field
 	 * @param fieldClass  the Field class to search for
-	 * @return the found Field or null
 	 */
-	fun getFirstFieldOfType(parentClass: Class<*>, fieldClass: Class<*>): Field? {
+	private fun findFirstFieldOfType(parentClass: Class<*>, fieldClass: Class<*>): Field? {
 		// Try to retrieve it from cache
 		var field = getCachedField(parentClass, fieldClass)
 
-		// If not cached, try reflection
+		// If not cached, use reflection and cache
 		if (field == null) {
-			field = findFirstFieldOfType(parentClass, fieldClass)
-
+			field = parentClass.findFirstFieldOfType(fieldClass)
 			// Null values are also cached because it will make the next failure quicker
 			setCachedField(parentClass, fieldClass, field)
 		}
@@ -126,26 +137,20 @@ internal class FieldRetriever {
 
 		fieldMap[fieldClass] = field
 	}
+}
 
-	companion object {
-
-		/**
-		 * Finds a field of a certain type in a given parent type
-		 *
-		 * @param parentClass the parent class that holds the field
-		 * @param fieldClass  the field class to search for
-		 * @return the found first Field of the specified type or null
-		 */
-		fun findFirstFieldOfType(parentClass: Class<*>, fieldClass: Class<*>): Field? {
-			val field = parentClass.declaredFields.firstOrNull { it.type == fieldClass }
-			if (field != null) {
-				return field
-			}
-
-			// Recursively check superclass
-			return parentClass.superclass?.let { superClass ->
-				findFirstFieldOfType(superClass, fieldClass)
-			}
-		}
+/**
+ * Finds a field of a certain type in a given parent type
+ *
+ * @param fieldClass  the field class to search for
+ * @return the found first Field of the specified type or null
+ */
+private fun Class<*>.findFirstFieldOfType(fieldClass: Class<*>): Field? {
+	val field = declaredFields.firstOrNull { it.type == fieldClass }
+	if (field != null) {
+		return field
 	}
+
+	// Recursively check superclass
+	return superclass?.findFirstFieldOfType(fieldClass)
 }
