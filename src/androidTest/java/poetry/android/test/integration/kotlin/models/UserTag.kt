@@ -1,4 +1,4 @@
-package poetry.android.test.kotlin.data.models
+package poetry.android.test.integration.kotlin.models
 
 import com.j256.ormlite.field.DatabaseField
 import com.j256.ormlite.table.DatabaseTable
@@ -6,13 +6,11 @@ import com.j256.ormlite.table.DatabaseTable
 @DatabaseTable
 class UserTag(
 	@DatabaseField(generatedId = true, columnName = "id")
-	val id: Int,
+	var id: Int = 0,
 
 	@DatabaseField(foreign = true, columnName = "user_id")
-	val user: User,
+	var user: User? = null,
 
 	@DatabaseField(columnName = "value")
-	val tag: String
-) {
-	internal constructor(): this(0, User.PlaceHolder, "")
-}
+	var tag: String? = null
+)

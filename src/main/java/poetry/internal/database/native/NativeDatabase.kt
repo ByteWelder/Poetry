@@ -9,7 +9,8 @@ import poetry.internal.database.NO_ID
 private const val logTag = "NativeDatabase"
 
 class NativeDatabase(
-	private val db: SQLiteDatabase
+	private val db: SQLiteDatabase,
+	private val logging: Boolean = true
 ) : Database {
 
 	init {
@@ -17,24 +18,35 @@ class NativeDatabase(
 	}
 
 	override fun beginTransaction() {
+		if (logging) {
+			Log.d(logTag, "beginTransaction")
+		}
 		db.beginTransaction()
 	}
 
 	override fun endTransaction() {
+		if (logging) {
+			Log.d(logTag, "endTransaction")
+		}
 		db.endTransaction()
 	}
 
 	override fun inTransaction() = db.inTransaction()
 
 	override fun setTransactionSuccessful() {
+		if (logging) {
+			Log.d(logTag, "setTransactionSuccessful")
+		}
 		db.setTransactionSuccessful()
 	}
 
 	override fun queryFirst(table: String, column: String, value: String): Long {
-		val cursor = db.rawQuery("SELECT column FROM '$table' WHERE $column = ? LIMIT 1", arrayOf(value))
-		return cursor.use {
-			if (cursor.hasItems()) {
-				cursor.getLong(0)
+		if (logging) {
+			Log.d(logTag, "queryFirst($table, $column = $value)")
+		}
+		return db.query("'$table'", arrayOf("ROWID"), "$column = ?", arrayOf(value), null, null, null).use {
+			if (it.hasItems()) {
+				it.getLong(0)
 			} else {
 				NO_ID
 			}
@@ -42,18 +54,30 @@ class NativeDatabase(
 	}
 
 	override fun insert(table: String, values: ContentValues, columnHack: String?): Long {
+		if (logging) {
+			Log.d(logTag, "insert($table, $values, $columnHack)")
+		}
 		return db.insert("'$table'", null, values)
 	}
 
 	override fun insertOrThrow(table: String, values: ContentValues, columnHack: String?): Long {
+		if (logging) {
+			Log.d(logTag, "insert($table, $values, $columnHack)")
+		}
 		return db.insertOrThrow("'$table'", columnHack, values)
 	}
 
 	override fun update(table: String, values: ContentValues, whereClause: String, whereArgs: Array<String?>): Int {
+		if (logging) {
+			Log.d(logTag, "update($table, $values, $whereArgs, $whereArgs)")
+		}
 		return db.update("'$table'", values, whereClause, whereArgs)
 	}
 
 	override fun delete(table: String, whereClause: String, whereArgs: Array<String?>): Int {
+		if (logging) {
+			Log.d(logTag, "delete($table, $whereClause, $whereArgs")
+		}
 		return db.delete("'$table'", whereClause, whereArgs)
 	}
 }

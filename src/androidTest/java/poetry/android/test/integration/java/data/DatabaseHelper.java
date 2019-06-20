@@ -1,4 +1,4 @@
-package poetry.android.test.java.data;
+package poetry.android.test.integration.java.data;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -7,10 +7,10 @@ import com.j256.ormlite.support.ConnectionSource;
 
 import org.jetbrains.annotations.NotNull;
 
-import poetry.android.test.java.data.models.Group;
-import poetry.android.test.java.data.models.User;
-import poetry.android.test.java.data.models.UserGroup;
-import poetry.android.test.java.data.models.UserTag;
+import poetry.android.test.integration.java.data.models.Group;
+import poetry.android.test.integration.java.data.models.User;
+import poetry.android.test.integration.java.data.models.UserGroup;
+import poetry.android.test.integration.java.data.models.UserTag;
 import poetry.DatabaseConfiguration;
 
 public class DatabaseHelper extends poetry.DatabaseHelper

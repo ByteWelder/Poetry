@@ -21,11 +21,11 @@ class DatabaseHelperRule<T : OrmLiteSqliteOpenHelper>(
 			helper = OpenHelperManager.getHelper(context, databaseHelperClass)
 			try {
 				base.evaluate()
-			} catch (caught: Exception) {
-				// No-op
 			} finally {
 				OpenHelperManager.releaseHelper()
 				OpenHelperManager.setOpenHelperClass(null)
+
+				context.deleteDatabase(helper.databaseName)
 			}
 		}
 	}

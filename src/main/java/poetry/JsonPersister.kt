@@ -33,6 +33,7 @@ import poetry.internal.reflection.isId
 import poetry.internal.toIterable
 import poetry.internal.toIterableJsonObject
 import java.lang.reflect.Field
+import kotlin.reflect.KClass
 
 private const val logTag = "JsonPersister"
 
@@ -80,6 +81,9 @@ class JsonPersister
 		}
 	}
 
+	@Throws(JSONException::class)
+	fun persistObject(modelClass: KClass<*>, jsonObject: JSONObject) = persistObject(modelClass.java, jsonObject)
+
 	/**
 	 * Recursively persist the array and all its object's children.
 	 *
@@ -96,6 +100,9 @@ class JsonPersister
 			persistArrayOfObjects(modelClass, jsonArray)
 		}
 	}
+
+	@Throws(JSONException::class)
+	fun persistArray(modelClass: KClass<*>, jsonArray: JSONArray) = persistArray(modelClass.java, jsonArray)
 
 	/**
 	 * Main persistence method for persisting a single object
@@ -134,6 +141,8 @@ class JsonPersister
 						if (idDescriptor != IdDescriptor.None) {
 							throw JSONException("Trying to set id twice for ${modelClass.name} with id ${idDescriptor.id}")
 						}
+						// TODO: this fails when there's a non-null field
+						// TODO: We should find the id value (and db field?) first
 						idDescriptor = createRowIfNotExists(jsonObject, jsonKey, field, databaseField, tableName)
 					} else { // object exists, so process its value or reference
 						processDatabaseField(field, databaseField, jsonObject, jsonKey, values)
@@ -152,7 +161,7 @@ class JsonPersister
 				}
 			} else {
 				if (!isOptionEnabled(options, OPTION_DISABLE_IGNORED_ATTRIBUTES_WARNING)) {
-					Log.w(logTag, "ignored attribute $jsonKey because it wasn't found in ${modelClass.simpleName} as a DatabaseField")
+					Log.w(logTag, "Ignored attribute $jsonKey because it wasn't found in ${modelClass.simpleName} as a DatabaseField")
 				}
 			}
 		}
@@ -165,10 +174,10 @@ class JsonPersister
 		// Update id field
 		// TODO: Is this really necessary? We should already have this in the database by now?!
 		if (values.size() > 0) {
-			database.update(tableName, values, "${idDescriptor.columnName} = ?", arrayOf(idDescriptor.id.toString()))
+			database.update(tableName, values, "ROWID = ?", arrayOf(idDescriptor.id.toString()))
 		}
 
-		Log.i(logTag, "imported ${modelClass.simpleName} (${idDescriptor.columnName}=${idDescriptor.id})")
+		Log.i(logTag, "Imported ${modelClass.simpleName} (${idDescriptor.columnName}=${idDescriptor.id})")
 
 		// Process foreign collection fields for inserted object
 		foreignCollectionMappings.forEach { mapping ->
@@ -223,7 +232,10 @@ class JsonPersister
 		val validId = if (queryId != NO_ID) {
 			queryId
 		} else {
-			database.insertOrThrow(tableName, ContentValues(), idColumnName)
+			val contentValues = ContentValues().apply {
+				putOrThrow(idColumnName, jsonId)
+			}
+			database.insertOrThrow(tableName, contentValues, idColumnName)
 		}
 
 		return IdDescriptor(idColumnName, validId)

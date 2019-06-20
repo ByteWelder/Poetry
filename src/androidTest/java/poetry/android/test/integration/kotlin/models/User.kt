@@ -1,4 +1,4 @@
-package poetry.android.test.kotlin.data.models
+package poetry.android.test.integration.kotlin.models
 
 import com.j256.ormlite.dao.ForeignCollection
 import com.j256.ormlite.field.DatabaseField
@@ -12,11 +12,11 @@ import poetry.annotations.MapFrom
 class User(
 	@DatabaseField(id = true, columnName = "id")
 	@MapFrom("id")
-	val id: Int,
+	var id: Int = 0,
 
 	@DatabaseField(columnName = "name")
 	@MapFrom("name")
-	val name: String,
+	var name: String? = null,
 
 	/**
 	 * Many-to-many relationships.
@@ -27,12 +27,12 @@ class User(
 	@ForeignCollectionField(eager = true)
 	@ManyToManyField(targetType = Group::class)
 	@MapFrom("groups")
-	val groups: ForeignCollection<UserGroup>? = null,
+	var groups: ForeignCollection<UserGroup>? = null,
 
 	/**
 	 * One-to-many relationships on simple types (arrays of strings/integers/etc.)
 	 *
-	 * OrmLite requries a ForeignCollectionField with the helper-type UserTag.
+	 * OrmLite requires a ForeignCollectionField with the helper-type UserTag.
 	 * JSON-to-SQLite persistence also requires the additional annotation "ForeignCollectionFieldSingleTarget" to
 	 * specify in which field of the UserTag table the simple type is stored. In this case the column name is "value":
 	 */
@@ -41,13 +41,6 @@ class User(
 	@MapFrom("tags")
 	val tags: ForeignCollection<UserTag>? = null
 ) {
-
-	internal constructor(): this(0, "")
-
-	companion object {
-		internal val PlaceHolder = User(0, "")
-	}
-
 	val tagsAsList: List<String?>
 		get() {
 			val safeTags = tags ?: return emptyList()

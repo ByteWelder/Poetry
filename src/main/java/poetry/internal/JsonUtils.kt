@@ -5,7 +5,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 class JsonArrayAnyIterator(private val array: JSONArray) : Iterator<Any> {
-	private var currentIndex = 0
+	private var currentIndex = -1
 	private val lastIndex = array.length() - 1
 
 	override fun hasNext() = currentIndex < lastIndex
@@ -14,7 +14,7 @@ class JsonArrayAnyIterator(private val array: JSONArray) : Iterator<Any> {
 }
 
 class JsonArrayJsonObjectIterator(private val array: JSONArray) : Iterator<JSONObject> {
-	private var currentIndex = 0
+	private var currentIndex = -1
 	private val lastIndex = array.length() - 1
 
 	override fun hasNext() = currentIndex < lastIndex

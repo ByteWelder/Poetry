@@ -8,6 +8,7 @@ import com.j256.ormlite.dao.Dao
 import com.j256.ormlite.support.ConnectionSource
 import com.j256.ormlite.table.TableUtils
 import java.sql.SQLException
+import kotlin.reflect.KClass
 
 open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 
@@ -53,7 +54,7 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 		newVersion: Int
 	) = recreateDatabase()
 
-	private fun <T> dropTable(classObject: Class<T>) {
+	private fun <T : Any> dropTable(classObject: Class<T>) {
 		try {
 			TableUtils.dropTable<T, Any>(getConnectionSource(), classObject, true)
 
@@ -87,16 +88,16 @@ open class DatabaseHelper : OrmLiteSqliteOpenHelper {
 	}
 
 	@Throws(java.sql.SQLException::class)
-	override fun <D : Dao<T, *>, T> getDao(clazz: Class<T>): D {
+	fun <ModelType : Any, IdType> getDao(clazz: KClass<ModelType>): Dao<ModelType, IdType> {
 		@Suppress("UNCHECKED_CAST")
-		val cachedDao = cachedDaos[clazz] as D?
+		val cachedDao = cachedDaos[clazz.java] as Dao<ModelType, IdType>?
 		return if (cachedDao != null) {
 			 cachedDao
 		} else {
 			// fetch new Dao
 			@Suppress("UNCHECKED_CAST")
-			val superDao = super.getDao(clazz) as D
-			cachedDaos[clazz] = superDao
+			val superDao = super.getDao(clazz.java) as Dao<ModelType, IdType>
+			cachedDaos[clazz.java] = superDao
 			superDao
 		}
 	}

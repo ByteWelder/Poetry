@@ -1,19 +1,17 @@
-package poetry.android.test.kotlin
+package poetry.android.test.integration.kotlin
 
-import com.j256.ormlite.dao.Dao
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import poetry.JsonPersister
 import poetry.android.test.R
+import poetry.android.test.integration.kotlin.models.Group
+import poetry.android.test.integration.kotlin.models.User
 import poetry.android.test.internal.DatabaseHelperRule
-import poetry.android.test.internal.loadJsonObject
-import poetry.android.test.kotlin.data.DatabaseHelper
-import poetry.android.test.kotlin.data.models.Group
-import poetry.android.test.kotlin.data.models.User
+import poetry.android.test.internal.toJsonObject
 
-class JsonTestCaseKotlin {
+class IntegrationTest {
 	@get:Rule
 	val helperRule = DatabaseHelperRule(DatabaseHelper::class.java)
 
@@ -21,7 +19,7 @@ class JsonTestCaseKotlin {
 	@Throws(Exception::class)
 	fun testJsonMapper() {
 		// Load JSON
-		val json = loadJsonObject(R.raw.test)
+		val json = R.raw.test.toJsonObject()
 
 		// Get child arrays from JSON
 		val usersJson = json.getJSONArray("users")
@@ -32,8 +30,8 @@ class JsonTestCaseKotlin {
 		persister.persistArray(User::class.java, usersJson)
 		persister.persistArray(Group::class.java, groupsJson)
 
-		val userDao = helperRule.helper.getDao<Dao<User, Int>, User>(User::class.java)
-		val groupDao = helperRule.helper.getDao<Dao<Group, Int>, Group>(Group::class.java)
+		val userDao = helperRule.helper.getDao<User, Int>(User::class)
+		val groupDao = helperRule.helper.getDao<Group, Int>(Group::class)
 
 		val users = userDao.queryForAll()
 		assertEquals(2, users.size.toLong())

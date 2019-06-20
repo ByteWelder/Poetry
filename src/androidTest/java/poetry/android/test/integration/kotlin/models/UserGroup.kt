@@ -1,4 +1,4 @@
-package poetry.android.test.kotlin.data.models
+package poetry.android.test.integration.kotlin.models
 
 import com.j256.ormlite.field.DatabaseField
 import com.j256.ormlite.table.DatabaseTable
@@ -11,15 +11,13 @@ import poetry.annotations.MapFrom
 class UserGroup(
 	@DatabaseField(generatedId = true)
 	@MapFrom("id")
-	val id: Int,
+	var id: Int = 0,
 
 	@DatabaseField(foreign = true, columnName = "user_id")
 	@MapFrom("user")
-	val user: User,
+	var user: User? = null,
 
 	@DatabaseField(foreign = true, columnName = "group_id")
 	@MapFrom("group")
-	val group: Group? = null
-) {
-	internal constructor(): this(0, User.PlaceHolder)
-}
+	var group: Group? = null
+)

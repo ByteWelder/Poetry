@@ -44,7 +44,7 @@ internal class FieldAnnotationRetriever(
 		val annotationMap = fieldAnnotationCache[field]
 		return if (annotationMap != null) {
 			@Suppress("UNCHECKED_CAST")
-			annotationMap[annotationClass] as AnnotationType
+			annotationMap[annotationClass] as AnnotationType?
 		} else {
 			null
 		}

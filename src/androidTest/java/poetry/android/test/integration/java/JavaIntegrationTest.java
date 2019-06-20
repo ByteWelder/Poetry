@@ -1,4 +1,4 @@
-package poetry.android.test.java;
+package poetry.android.test.integration.java;
 
 import com.j256.ormlite.dao.Dao;
 
@@ -11,18 +11,18 @@ import java.util.List;
 
 import poetry.JsonPersister;
 import poetry.android.test.internal.DatabaseHelperRule;
-import poetry.android.test.java.data.DatabaseHelper;
-import poetry.android.test.java.data.models.Group;
-import poetry.android.test.java.data.models.User;
+import poetry.android.test.internal.RawResToJsonKt;
+import poetry.android.test.integration.java.data.DatabaseHelper;
+import poetry.android.test.integration.java.data.models.Group;
+import poetry.android.test.integration.java.data.models.User;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static poetry.android.test.internal.JsonLoaderKt.loadJsonObject;
 
 /**
  * This test case is to verify Java syntax compatibility.
  */
-public class JsonTestCaseJava
+public class JavaIntegrationTest
 {
 	@Rule
 	public DatabaseHelperRule<DatabaseHelper> helperRule = new DatabaseHelperRule<>(DatabaseHelper.class);
@@ -31,7 +31,7 @@ public class JsonTestCaseJava
 	public void testJsonMapper() throws Exception
 	{
 		// Load JSON
-		JSONObject json = loadJsonObject(poetry.android.test.R.raw.test);
+		JSONObject json = RawResToJsonKt.toJsonObject(poetry.android.test.R.raw.test);
 
 		// Get child arrays from JSON
 		JSONArray usersJson = json.getJSONArray("users");

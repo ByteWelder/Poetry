@@ -7,9 +7,9 @@ import org.json.JSONTokener
 import java.io.IOException
 
 @Throws(IOException::class, JSONException::class)
-fun loadJsonObject(rawResId: Int): JSONObject {
+fun Int.toJsonObject(): JSONObject {
 	val context = InstrumentationRegistry.getInstrumentation().context
-	val inputStream = context.resources.openRawResource(rawResId)
+	val inputStream = context.resources.openRawResource(this)
 	val tokener = JSONTokener(inputStream.reader().readText())
 	return JSONObject(tokener)
 }
