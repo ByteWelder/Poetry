@@ -32,7 +32,7 @@ class StringIdTest {
 	val helperRule = DatabaseHelperRule(StringIdHelper::class.java)
 
 	@Test
-	fun test() {
+	fun id_value_should_be_persisted_properly() {
 		"""{ "id": "idValue" } """.toJsonObject().test(
 			helperRule.helper,
 			StringIdModel::class
