@@ -34,6 +34,9 @@ internal class FieldAnnotationRetriever(
 		return annotation
 	}
 
+	fun <AnnotationType : Annotation> hasAnnotation(field: Field, annotationClass: Class<AnnotationType>) =
+			findAnnotation(field, annotationClass) != null
+
 	fun <AnnotationType : Annotation> findAnnotationOrThrow(field: Field, annotationClass: Class<AnnotationType>): AnnotationType {
 		return checkNotNull(findAnnotation(field, annotationClass)) {
 			"${annotationClass.name} annotation not found on field ${field.name}"

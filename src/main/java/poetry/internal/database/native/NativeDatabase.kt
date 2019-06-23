@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import poetry.internal.database.Database
-import poetry.internal.database.NO_ID
 
 private const val logTag = "NativeDatabase"
 
@@ -40,7 +39,7 @@ class NativeDatabase(
 		db.setTransactionSuccessful()
 	}
 
-	override fun queryFirst(table: String, column: String, value: String): Long {
+	override fun queryFirst(table: String, column: String, value: String): Long? {
 		if (logging) {
 			Log.d(logTag, "queryFirst($table, $column = $value)")
 		}
@@ -48,7 +47,7 @@ class NativeDatabase(
 			if (it.hasItems()) {
 				it.getLong(0)
 			} else {
-				NO_ID
+				null
 			}
 		}
 	}

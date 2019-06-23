@@ -9,10 +9,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import poetry.android.test.internal.DatabaseHelperRule
-import poetry.android.test.internal.databaseConfigurationOf
 import poetry.android.test.internal.test
 import poetry.android.test.internal.toJsonObject
 import poetry.annotations.MapFrom
+import poetry.databaseConfigurationOf
 
 @DatabaseTable
 class BasicModel(
@@ -31,7 +31,7 @@ class BasicHelper(context: Context) : poetry.DatabaseHelper(
 	context,
 	databaseConfigurationOf(
 		"StringIdTest",
-			BasicModel::class
+		BasicModel::class
 	)
 )
 
@@ -43,7 +43,7 @@ class BasicTest {
 	val expectedException = ExpectedException.none()!!
 
 	@Test
-	fun basic_persistence_should_work() {
+	fun basic_object_stored_then_retrieved() {
 		"""
 		{
 			"theId": 123,
@@ -70,11 +70,8 @@ class BasicTest {
 		}
 		""".toJsonObject().test(
 			helperRule.helper,
-				BasicModel::class
-		) { model ->
-			assertEquals("idValue", model.id)
-			assertEquals("value", model.value)
-		}
+			BasicModel::class
+		) { }
 	}
 }
 

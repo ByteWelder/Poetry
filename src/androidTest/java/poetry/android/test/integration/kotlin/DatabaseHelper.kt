@@ -6,7 +6,7 @@ import poetry.android.test.integration.kotlin.models.Group
 import poetry.android.test.integration.kotlin.models.User
 import poetry.android.test.integration.kotlin.models.UserGroup
 import poetry.android.test.integration.kotlin.models.UserTag
-import poetry.android.test.internal.databaseConfigurationOf
+import poetry.databaseConfigurationOf
 
 class DatabaseHelper(context: Context) : DatabaseHelper(
 	context,

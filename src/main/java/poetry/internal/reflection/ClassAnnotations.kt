@@ -24,3 +24,4 @@ internal fun ClassAnnotationRetriever.getTableNameOrThrow(modelClass: Class<*>):
 internal fun getTableName(modelClass: Class<*>, tableAnnotation: DatabaseTable): String {
 	return if (tableAnnotation.tableName.isNotEmpty()) tableAnnotation.tableName else modelClass.simpleName
 }
+

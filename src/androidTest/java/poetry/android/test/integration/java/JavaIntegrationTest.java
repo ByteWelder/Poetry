@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import poetry.JsonPersister;
+import poetry.Poetry;
 import poetry.android.test.internal.DatabaseHelperRule;
 import poetry.android.test.internal.RawResToJsonKt;
 import poetry.android.test.integration.java.data.DatabaseHelper;
@@ -38,9 +38,9 @@ public class JavaIntegrationTest
 		JSONArray groupsJson = json.getJSONArray("groups");
 
 		// Persist arrays to database
-		JsonPersister persister = new JsonPersister(helperRule.helper.getWritableDatabase());
-		persister.persistArray(User.class, usersJson);
-		persister.persistArray(Group.class, groupsJson);
+		Poetry persister = new Poetry(helperRule.helper.getWritableDatabase());
+		persister.writeArray(User.class, usersJson);
+		persister.writeArray(Group.class, groupsJson);
 
 		Dao<User, Integer> userDao = helperRule.helper.getDao(User.class);
 		Dao<Group, Integer> GroupDao = helperRule.helper.getDao(Group.class);

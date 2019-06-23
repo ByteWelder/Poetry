@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.util.Log
 
 private const val logTag = "NativeDatabase"
-const val NO_ID: Long = 0
 
 interface Database {
 	fun beginTransaction()
@@ -12,7 +11,7 @@ interface Database {
 	fun inTransaction(): Boolean
 	fun setTransactionSuccessful()
 
-	fun queryFirst(table: String, column: String, value: String): Long
+	fun queryFirst(table: String, column: String, value: String): Long?
 	fun insert(table: String, values: ContentValues, columnHack: String? = null): Long
 	fun insertOrThrow(table: String, values: ContentValues, columnHack: String? = null): Long
 	fun update(table: String, values: ContentValues, whereClause: String, whereArgs: Array<String?>): Int

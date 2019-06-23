@@ -14,8 +14,10 @@ internal object QueryUtils {
 	 * @throws InvalidParameterException when the input object is not supported
 	 */
 	@Throws(InvalidParameterException::class)
-	fun parseAttribute(attribute: Any): String {
-		return if (Int::class.java.isAssignableFrom(attribute.javaClass)
+	fun parseAttribute(attribute: Any?): String {
+		return if (attribute == null) {
+			return "NULL"
+		} else if (Int::class.java.isAssignableFrom(attribute.javaClass)
 				|| Integer::class.java.isAssignableFrom(attribute.javaClass)) {
 			Integer.toString(attribute as Int)
 		} else if (Long::class.java.isAssignableFrom(attribute.javaClass)
@@ -43,36 +45,5 @@ internal object QueryUtils {
 		} else {
 			throw InvalidParameterException("parameter type not supported: " + attribute.javaClass.name)
 		}
-	}
-
-	/**
-	 * Creates an "IN (?, ...)" query and outputs target ids.
-	 *
-	 * @param targetIds a list of IDs for the query
-	 * @param outputQueryArgs the array that will hold the output values for the query
-	 * @return the query part
-	 */
-	fun createInClause(targetIds: List<Any>, outputQueryArgs: Array<String?>): String {
-		if (outputQueryArgs.size != targetIds.size) {
-			throw RuntimeException("targetIds and targetIdArgs must be the same size")
-		}
-
-		val inClauseBuilder = StringBuilder(5 + (targetIds.size * 2))
-
-		inClauseBuilder.append("IN (")
-
-		for (index in targetIds.indices) {
-			outputQueryArgs[index] = parseAttribute(targetIds[index])
-
-			inClauseBuilder.append('?')
-
-			if (index != targetIds.lastIndex) {
-				inClauseBuilder.append(',')
-			}
-		}
-
-		inClauseBuilder.append(')')
-
-		return inClauseBuilder.toString()
 	}
 }

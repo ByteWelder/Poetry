@@ -7,9 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import poetry.android.test.internal.DatabaseHelperRule
-import poetry.android.test.internal.databaseConfigurationOf
 import poetry.android.test.internal.test
 import poetry.android.test.internal.toJsonObject
+import poetry.databaseConfigurationOf
 
 @DatabaseTable
 class StringIdModel(

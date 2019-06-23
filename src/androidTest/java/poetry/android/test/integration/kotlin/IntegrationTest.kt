@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
-import poetry.JsonPersister
+import poetry.Poetry
 import poetry.android.test.R
 import poetry.android.test.integration.kotlin.models.Group
 import poetry.android.test.integration.kotlin.models.User
@@ -26,9 +26,9 @@ class IntegrationTest {
 		val groupsJson = json.getJSONArray("groups")
 
 		// Persist arrays to database
-		val persister = JsonPersister(helperRule.helper.writableDatabase)
-		persister.persistArray(User::class.java, usersJson)
-		persister.persistArray(Group::class.java, groupsJson)
+		val persister = Poetry(helperRule.helper.writableDatabase)
+		persister.writeArray(User::class.java, usersJson)
+		persister.writeArray(Group::class.java, groupsJson)
 
 		val userDao = helperRule.helper.getDao<User, Int>(User::class)
 		val groupDao = helperRule.helper.getDao<Group, Int>(Group::class)

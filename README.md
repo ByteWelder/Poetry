@@ -16,28 +16,32 @@ Consider this JSON:
 }
 ```
 And this Java model:
-```java
+```kotlin
 @DatabaseTable
-class User
-{
+class Model(
 	@DatabaseField(id = true)
-	public int id;
+	var id: Long,
 
-	@DatabaseField)
-	public String name;
+	@DatabaseField
+	var value: String
+) {
+	internal constructor(): this(0, "")
 }
 ```
+
 They can be stored into the database like this:
-```java
-JSONObject json_object = ...; // processed JSON tree
-DatabaseHelper helper = ...; // OrmLite databasehelper;
-JsonPersister persister = new JsonPersister(helper.getWritableDatabase());
-persister.persistObject(User.class, json_object);
+
+```kotlin
+val jsonObject = .. // processed JSON tree
+val databaseHelper = .. // OrmLite databasehelper;
+val poetry = Poetry(databaseHelper.writableDatabase)
+poetry.writeObject(User.class, jsonObject)
 ```
+
 ## Features ##
 
 * Annotation-based model configuration
-* Advanced `DatabaseHelper` with easy `DatabaseConfiguration`
+* Advanced `DatabaseHelper` with easy-to-use `DatabaseConfiguration`
 * Support for relationships:
 	* One-to-one
 	* Many-to-one
@@ -48,7 +52,7 @@ persister.persistObject(User.class, json_object);
 
 ## Requirements ##
 
-- Android 4.1 (API level 16) or higher
+- Android 5.0 (API level 21) or higher
 
 ## Usage ##
 
@@ -63,7 +67,7 @@ repositories {
 ```groovy
 dependencies {
     compile (
-        [group: 'com.bytewelder.poetry', name: 'poetry', version: '4.0.0']
+        [group: 'com.bytewelder.poetry', name: 'poetry', version: '5.0.0']
     )
 }
 ```
@@ -73,7 +77,7 @@ dependencies {
  * Models that are imported more than once within a single JSON tree are updated every time they are processed.
  * Attributes that are not specified in JSON are not updated
  * Attributes that are imported with null value will have a null value in the database. Make sure your model allows this.
- * When you use `JsonPersister`'s `persistArray()` method, it will import the array and delete all objects from the database that do not correspond to any of the imported IDs.
+ * When you use the `poetry.writeArray()` method, it will import the array and delete all objects from the database that do not correspond to any of the imported id values.
 
 ## Tutorial ##
 
@@ -82,33 +86,17 @@ dependencies {
 The Poetry `DatabaseHelper` allows you to easily configure your database.
 In the example below, you can see a custom `DatabaseHelper` with a `DatabaseConfiguration` that holds the model version and model classes.
 
-**MyDatabaseHelper.java**
-```java
-import android.database.sqlite.SQLiteDatabase;
-import com.j256.ormlite.android.apptools.OpenHelperManager;
-import com.j256.ormlite.support.ConnectionSource;
-import poetry.DatabaseConfiguration;
-
-public class MyDatabaseHelper extends poetry.DatabaseHelper
-{
-    public final static DatabaseConfiguration sConfiguration = new DatabaseConfiguration(1, new Class<?>[]
-    {
-        User.class,
-        Group.class,
-        UserTag.class,
-        UserGroup.class
-    });
-
-    public DatabaseHelper(Context context)
-    {
-        super(context, sConfiguration);
-    }
-
-    public static DatabaseHelper getHelper(Context context)
-    {
-        return OpenHelperManager.getHelper(context, DatabaseHelper.class);
-    }
-}
+**MyDatabaseHelper.kt**
+```kotlin
+class BasicHelper(context: Context) : poetry.DatabaseHelper(
+	context,
+	databaseConfigurationOf(
+		"DatabaseName",
+        ModelA::class,
+        ModelB::class
+        ModelC::class
+	)
+)
 ```
 
 ### Mapping custom JSON properties ###

@@ -3,8 +3,14 @@ package poetry.internal.database
 import android.content.ContentValues
 import java.util.Date
 
-fun ContentValues.put(key: String, value: Any): Boolean {
-	val valueClass = value.javaClass
+fun ContentValues.put(key: String, value: Any?): Boolean {
+	if (value == null) {
+		putNull(key)
+		return true
+	}
+
+	val valueClass = checkNotNull(value).javaClass
+
 	if (Int::class.java == valueClass || java.lang.Integer::class.java == valueClass) {
 		put(key, value as Int)
 	} else if (Long::class.java == valueClass || java.lang.Long::class.java == valueClass) {
@@ -30,8 +36,10 @@ fun ContentValues.put(key: String, value: Any): Boolean {
 	return true
 }
 
-fun ContentValues.putOrThrow(key: String, value: Any) {
+fun ContentValues.putOrThrow(key: String, value: Any?) {
+	// TODO: make test with null value
 	if (!put(key, value)) {
-		throw RuntimeException("failed to copy value \"$value\" from key \"$key\" because the type ${value.javaClass.name} is not supported")
+		val typeString = value?.javaClass?.name ?: "[unknown]"
+		throw RuntimeException("failed to copy value \"$value\" from key \"$key\" because the type $typeString is not supported")
 	}
 }

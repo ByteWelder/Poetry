@@ -4,7 +4,7 @@ import com.j256.ormlite.dao.Dao
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert
-import poetry.JsonPersister
+import poetry.Poetry
 import kotlin.reflect.KClass
 
 fun <ModelType : Any> JSONObject.test(
@@ -13,8 +13,8 @@ fun <ModelType : Any> JSONObject.test(
 	evaluationBlock: (ModelType) -> (Unit)
 ) {
 	// Persist arrays to database
-	val persister = JsonPersister(helper.writableDatabase)
-	persister.persistObject(modelClass, this)
+	val persister = Poetry(helper.writableDatabase)
+	persister.writeObject(modelClass, this)
 
 	val dao = helper.getDao<Dao<ModelType, *>, ModelType>(modelClass.java)
 	val models = dao.queryForAll()
@@ -30,8 +30,8 @@ fun <ModelType : Any> JSONArray.test(
 	evaluationBlock: (List<ModelType>) -> (Unit)
 ) {
 	// Persist arrays to database
-	val persister = JsonPersister(helper.writableDatabase)
-	persister.persistArray(modelClass, this)
+	val persister = Poetry(helper.writableDatabase)
+	persister.writeArray(modelClass, this)
 
 	val dao = helper.getDao<Dao<ModelType, *>, ModelType>(modelClass.java)
 	val models = dao.queryForAll()
