@@ -210,18 +210,20 @@ private constructor(
 		val targetClass = foreignCollectionField.getForeignCollectionParameterType()
 		val targetForeignField = fieldAnnotationRetriever.findForeignFieldOrThrow(targetClass, entry.modelClass)
 		val targetTargetField = fieldRetriever.findFirstFieldOfTypeOrThrow(targetClass, entry.manyToManyField.targetType.javaObjectType)
+
+		// Persist all child objects in the array
 		val targetTargetIds = writeArrayOfObjects(targetTargetField.type, entry.jsonArray)
+
 		val targetTableName = classAnnotationRetriever.getTableNameOrThrow(targetClass)
-		val targetForeignDbField = fieldAnnotationRetriever.findAnnotation(targetForeignField, DatabaseField::class.java)
-		val targetForeignDbFieldSafe = checkNotNull(targetForeignDbField)
-		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignDbFieldSafe)
+		val targetForeignDbField = fieldAnnotationRetriever.findAnnotationOrThrow(targetForeignField, DatabaseField::class.java)
+		val targetForeignFieldName = getColumnNameForField(targetForeignField, targetForeignDbField)
 		val targetForeignFieldValue = QueryUtils.parseAttribute(parentId)
 
-		database.delete(targetTableName, "$targetForeignFieldName = $targetForeignFieldValue", emptyArray())
+		// Delete all old relationships
+		database.delete(targetTableName, "$targetForeignFieldName = ?", arrayOf(targetForeignFieldValue))
 
-		val targetTargetDatabaseField = fieldAnnotationRetriever.findAnnotation(targetTargetField, DatabaseField::class.java)
-		val targetTargetDatabaseFieldSafe = checkNotNull(targetTargetDatabaseField)
-		val targetTargetFieldName = getColumnNameForField(targetTargetField, targetTargetDatabaseFieldSafe)
+		val targetTargetDatabaseField = fieldAnnotationRetriever.findAnnotationOrThrow(targetTargetField, DatabaseField::class.java)
+		val targetTargetFieldName = getColumnNameForField(targetTargetField, targetTargetDatabaseField)
 
 		// Insert new references
 		targetTargetIds.indices.forEach { index ->
@@ -257,8 +259,10 @@ private constructor(
 		val targetIdFieldName = fieldAnnotationRetriever.getColumnNameForField(targetIdField)
 
 		// Update references to all target objects
-		database.update(targetTableName, values, "$targetIdFieldName ${inClause.selector}", inClause.values)
-		// TODO: logging updated row count
+		val count = database.update(targetTableName, values, "$targetIdFieldName ${inClause.selector}", inClause.values)
+		if (count != targetIds.size) {
+			throw IllegalStateException("Updated $count references but expected ${targetIds.size} while processing one-to-many relationship for ${entry.modelClass.simpleName}.${entry.field.name}")
+		}
 
 		if (!PoetryOptions.isEnabled(options, PoetryOptions.DISABLE_FOREIGN_COLLECTION_CLEANUP)) {
 			// Remove all objects that are not referenced to the parent anymore
