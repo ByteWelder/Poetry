@@ -146,8 +146,8 @@ public class Game
     @DatabaseField(id = true)
     public int id;
     
-	@ForeignCollectionField(eager = true)
-	public ForeignCollection<Player> players;
+    @DatabaseField(foreign = true)
+    public Player player;
 }
 ```
 **Player.java**
@@ -160,6 +160,9 @@ public class Player
 
     @DatabaseField
     public String name;
+
+	@ForeignCollectionField(eager = true)
+	public ForeignCollection<Player> players;
 }
 ```
 

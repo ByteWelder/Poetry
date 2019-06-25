@@ -40,16 +40,4 @@ class User(
 	@ForeignCollectionFieldSingleTarget(targetField = "value")
 	@MapFrom("tags")
 	val tags: ForeignCollection<UserTag>? = null
-) {
-	val tagsAsList: List<String?>
-		get() {
-			val safeTags = tags ?: return emptyList()
-			val tags = ArrayList<String?>(safeTags.size)
-
-			for (safeTag in safeTags) {
-				tags.add(safeTag.tag)
-			}
-
-			return tags
-		}
-}
+)

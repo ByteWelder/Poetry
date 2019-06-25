@@ -13,8 +13,8 @@ fun <ModelType : Any> JSONObject.test(
 	evaluationBlock: (ModelType) -> (Unit)
 ) {
 	// Persist arrays to database
-	val persister = Poetry(helper.writableDatabase)
-	persister.writeObject(modelClass, this)
+	val poetry = Poetry(helper.writableDatabase)
+	poetry.writeObject(modelClass, this)
 
 	val dao = helper.getDao<Dao<ModelType, *>, ModelType>(modelClass.java)
 	val models = dao.queryForAll()
@@ -30,8 +30,8 @@ fun <ModelType : Any> JSONArray.test(
 	evaluationBlock: (List<ModelType>) -> (Unit)
 ) {
 	// Persist arrays to database
-	val persister = Poetry(helper.writableDatabase)
-	persister.writeArray(modelClass, this)
+	val poetry = Poetry(helper.writableDatabase)
+	poetry.writeArray(modelClass, this)
 
 	val dao = helper.getDao<Dao<ModelType, *>, ModelType>(modelClass.java)
 	val models = dao.queryForAll()

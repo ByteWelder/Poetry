@@ -10,6 +10,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import poetry.annotations.ForeignCollectionFieldSingleTarget
 import poetry.internal.Entry
+import poetry.internal.IdAndColumn
 import poetry.internal.JsonKeyAndField
 import poetry.internal.database.Database
 import poetry.internal.database.QueryUtils
@@ -66,7 +67,7 @@ private constructor(
 	 * @throws JSONException when something went wrong through parsing, this also fails the database transaction and results in no data changes
 	</IdType> */
 	@Throws(JSONException::class)
-	fun writeObject(modelClass: Class<*>, jsonObject: JSONObject): Long {
+	fun writeObject(modelClass: Class<*>, jsonObject: JSONObject): Any {
 		warnIfOnMainThread("Poetry.writeObject()")
 		return database.transaction {
 			writeObjectInternal(modelClass, jsonObject)
@@ -85,7 +86,7 @@ private constructor(
 	 * @throws JSONException when something went wrong through parsing (this cancels the db transaction)
 	 */
 	@Throws(JSONException::class)
-	fun writeArray(modelClass: Class<*>, jsonArray: JSONArray): List<Long> {
+	fun writeArray(modelClass: Class<*>, jsonArray: JSONArray): List<Any> {
 		warnIfOnMainThread("Poetry.writeArray()")
 		return database.transaction {
 			writeArrayOfObjects(modelClass, jsonArray)
@@ -104,7 +105,7 @@ private constructor(
 	fun writeArray(modelClass: KClass<*>, jsonArray: JSONArray) = writeArray(modelClass.java, jsonArray)
 
 	@Throws(JSONException::class)
-	private fun writeObjectInternal(modelClass: Class<*>, jsonObject: JSONObject): Long {
+	private fun writeObjectInternal(modelClass: Class<*>, jsonObject: JSONObject): Any {
 		val tableAnnotation = classAnnotationRetriever.findAnnotationOrThrow(modelClass, DatabaseTable::class.java)
 		val tableName = getTableName(modelClass, tableAnnotation)
 
@@ -125,36 +126,49 @@ private constructor(
 				}
 
 		// TODO: search for id in previous stream
-		val id = entries.mapNotNull { it as? Entry.FieldEntry }
+		val realIdAndColumn = entries.mapNotNull { it as? Entry.FieldEntry }
 				.filter{ it.databaseField.isId() }
 				.map { entry ->
 					val idColumnName = getColumnNameForField(entry.field, entry.databaseField)
 					val idValue = jsonObject.getValue(entry.jsonKey, entry.field.type)
-					database.queryFirst(tableName, idColumnName, idValue.toString())
+					IdAndColumn(idValue, idColumnName)
 				}
 				.firstOrNull()
 
-		val resultingId = if (id != null) {
-			database.update(tableName, contentValues, "ROWID = ?", arrayOf(id.toString()))
-			id
+		val hasRowInDb = if (realIdAndColumn != null) {
+			val foundId = database.queryFirst(tableName, realIdAndColumn.column, realIdAndColumn.id.toString())
+			foundId != null
 		} else {
-			database.insertOrThrow(tableName, contentValues)
+			false
 		}
 
-		Log.i(logTag, "Imported ${modelClass.simpleName} with id $resultingId")
+		val safeRealId = if (hasRowInDb && realIdAndColumn != null) {
+			val columnName = realIdAndColumn.column
+			val id = realIdAndColumn.id.toString()
+			database.update(tableName, contentValues, "$columnName = ?", arrayOf(id))
+			realIdAndColumn.id
+		} else if (realIdAndColumn != null ){
+			database.insertOrThrow(tableName, contentValues)
+			realIdAndColumn.id
+		} else {
+			database.insertOrThrow(tableName, contentValues)
+			// TODO: return real id, because otherwise one-to-many fails
+		}
+
+		Log.i(logTag, "Imported ${modelClass.simpleName} with id $safeRealId")
 
 		entries.forEach {
 			when (it) {
-				is Entry.ManyToManyEntry -> processManyToMany(it, resultingId)
-				is Entry.ManyToOneEntry -> processManyToOne(it, resultingId)
+				is Entry.ManyToManyEntry -> processManyToMany(it, safeRealId)
+				is Entry.ManyToOneEntry -> processManyToOne(it, safeRealId)
 			}
 		}
 
-		return resultingId
+		return safeRealId
 	}
 
 	@Throws(JSONException::class)
-	private fun writeArrayOfObjects(modelClass: Class<*>, jsonArray: JSONArray): List<Long> {
+	private fun writeArrayOfObjects(modelClass: Class<*>, jsonArray: JSONArray): List<Any> {
 		return jsonArray.toIterableJsonObject()
 				.map { writeObjectInternal(modelClass, it) }
 				.toList()
@@ -244,6 +258,7 @@ private constructor(
 
 		// Update references to all target objects
 		database.update(targetTableName, values, "$targetIdFieldName ${inClause.selector}", inClause.values)
+		// TODO: logging updated row count
 
 		if (!PoetryOptions.isEnabled(options, PoetryOptions.DISABLE_FOREIGN_COLLECTION_CLEANUP)) {
 			// Remove all objects that are not referenced to the parent anymore

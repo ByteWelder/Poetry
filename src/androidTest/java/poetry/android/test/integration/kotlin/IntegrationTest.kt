@@ -10,6 +10,7 @@ import poetry.android.test.integration.kotlin.models.Group
 import poetry.android.test.integration.kotlin.models.User
 import poetry.android.test.internal.DatabaseHelperRule
 import poetry.android.test.internal.toJsonObject
+import poetry.toListOrEmptyList
 
 class IntegrationTest {
 	@get:Rule
@@ -42,8 +43,10 @@ class IntegrationTest {
 		val user = userDao.queryForId(1)
 		assertNotNull(user)
 		assertEquals("John", user.name)
-		assertEquals(2, user.tagsAsList.size.toLong())
-		assertEquals("tag2", user.tagsAsList[1])
+		val tagList = user.tags.toListOrEmptyList()
+		assertEquals(2, tagList.size.toLong())
+		assertEquals("tag1", tagList[0].tag)
+		assertEquals("tag2", tagList[1].tag)
 
 		val group = groupDao.queryForId(2)
 		assertNotNull(group)
