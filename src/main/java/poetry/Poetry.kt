@@ -136,8 +136,7 @@ private constructor(
 				.firstOrNull()
 
 		val hasRowInDb = if (realIdAndColumn != null) {
-			val foundId = database.queryFirst(tableName, realIdAndColumn.column, realIdAndColumn.id.toString())
-			foundId != null
+			database.hasAny(tableName, realIdAndColumn.column, realIdAndColumn.id.toString())
 		} else {
 			false
 		}

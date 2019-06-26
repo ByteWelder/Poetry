@@ -39,43 +39,41 @@ class NativeDatabase(
 		db.setTransactionSuccessful()
 	}
 
-	override fun queryFirst(table: String, column: String, value: String): Long? {
+	override fun hasAny(table: String, column: String, value: String): Boolean {
 		if (logging) {
-			Log.d(logTag, "queryFirst($table, $column = $value)")
+			Log.d(logTag, "queryFirst('$table', '$column' = '$value')")
 		}
-		return db.query("'$table'", arrayOf("ROWID"), "$column = ?", arrayOf(value), null, null, null).use {
-			if (it.hasItems()) {
-				it.getLong(0)
-			} else {
-				null
-			}
+		return db.query("'$table'", emptyArray(), "$column = ?", arrayOf(value), null, null, null).use {
+			it.hasItems()
 		}
 	}
 
 	override fun insert(table: String, values: ContentValues, columnHack: String?): Long {
 		if (logging) {
-			Log.d(logTag, "insert($table, $values, $columnHack)")
+			val columnHackPostfix = columnHackToLogPostfix(columnHack)
+			Log.d(logTag, "insert('$table', $values$columnHackPostfix)")
 		}
 		return db.insert("'$table'", null, values)
 	}
 
 	override fun insertOrThrow(table: String, values: ContentValues, columnHack: String?): Long {
 		if (logging) {
-			Log.d(logTag, "insert($table, $values, $columnHack)")
+			val columnHackPostfix = columnHackToLogPostfix(columnHack)
+			Log.d(logTag, "insert('$table', $values$columnHackPostfix)")
 		}
 		return db.insertOrThrow("'$table'", columnHack, values)
 	}
 
 	override fun update(table: String, values: ContentValues, whereClause: String, whereArgs: Array<String?>): Int {
 		if (logging) {
-			Log.d(logTag, "update($table, $values, $whereArgs, $whereArgs)")
+			Log.d(logTag, "update('$table', $values, '$whereClause', ${whereArgs.joinToString(",")})")
 		}
 		return db.update("'$table'", values, whereClause, whereArgs)
 	}
 
 	override fun delete(table: String, whereClause: String, whereArgs: Array<String?>): Int {
 		if (logging) {
-			Log.d(logTag, "delete($table, $whereClause, $whereArgs")
+			Log.d(logTag, "delete('$table', '$whereClause', ${whereArgs.joinToString(",")}")
 		}
 		return db.delete("'$table'", whereClause, whereArgs)
 	}
@@ -89,5 +87,13 @@ private fun SQLiteDatabase.enableWriteAheadLoggingSafely() {
 		}
 	} catch (e: IllegalStateException) {
 		Log.w(logTag, "Write Ahead Logging is not enabled because a transaction was active")
+	}
+}
+
+private fun columnHackToLogPostfix(value: String?): String {
+	return if (value != null) {
+		", columnHack='$value'"
+	} else {
+		""
 	}
 }
