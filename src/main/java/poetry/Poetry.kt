@@ -143,7 +143,7 @@ private constructor(
 
 		val safeRealId = if (hasRowInDb && realIdAndColumn != null) {
 			val columnName = realIdAndColumn.column
-			val id = realIdAndColumn.id.toString()
+			val id = realIdAndColumn.id.toString() // TODO: we might not need toString()
 			database.update(tableName, contentValues, "$columnName = ?", arrayOf(id))
 			realIdAndColumn.id
 		} else if (realIdAndColumn != null ){

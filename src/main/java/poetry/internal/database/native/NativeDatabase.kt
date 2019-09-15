@@ -73,7 +73,7 @@ class NativeDatabase(
 
 	override fun delete(table: String, whereClause: String, whereArgs: Array<String?>): Int {
 		if (logging) {
-			Log.d(logTag, "delete('$table', '$whereClause', ${whereArgs.joinToString(",")}")
+			Log.d(logTag, "delete('$table', '$whereClause', ${whereArgs.joinToString(",")})")
 		}
 		return db.delete("'$table'", whereClause, whereArgs)
 	}

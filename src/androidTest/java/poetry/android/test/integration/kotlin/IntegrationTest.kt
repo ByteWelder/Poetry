@@ -35,16 +35,16 @@ class IntegrationTest {
 		val groupDao = helperRule.helper.getDao<Group, Int>(Group::class)
 
 		val users = userDao.queryForAll()
-		assertEquals(2, users.size.toLong())
+		assertEquals(2, users.size)
 
 		val groups = groupDao.queryForAll()
-		assertEquals(3, groups.size.toLong())
+		assertEquals(3, groups.size)
 
 		val user = userDao.queryForId(1)
 		assertNotNull(user)
 		assertEquals("John", user.name)
 		val tagList = user.tags.toListOrEmptyList()
-		assertEquals(2, tagList.size.toLong())
+		assertEquals(2, tagList.size)
 		assertEquals("tag1", tagList[0].tag)
 		assertEquals("tag2", tagList[1].tag)
 

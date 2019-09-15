@@ -18,7 +18,7 @@ fun <ModelType : Any> JSONObject.test(
 
 	val dao = helper.getDao<Dao<ModelType, *>, ModelType>(modelClass.java)
 	val models = dao.queryForAll()
-	Assert.assertEquals(1, models.size.toLong())
+	Assert.assertEquals(1, models.size)
 
 	val model = models.first()
 	evaluationBlock(model)
