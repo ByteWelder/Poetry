@@ -1,3 +1,9 @@
+# ARCHIVED
+
+This project is no longer being worked on.
+
+Consider using [Room](https://developer.android.com/topic/libraries/architecture/room) instead.
+
 Poetry
 ======
 
